@@ -1,0 +1,3 @@
+# Directorio para almacenar las migraciones de TypeORM
+# Generar nueva migración:
+# npm run migration:generate -- src/migrations/NombreDeLaMigracion
