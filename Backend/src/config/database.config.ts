@@ -1,7 +1,7 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { envConfig } from './env.config';
-import { Suscriptor } from '../modules/suscriptores/suscriptor.entity';
+import { Suscriptor } from '../modules/suscriptores/infrastructure/suscriptor.entity';
 import { Suscripcion } from '../modules/suscripciones/suscripcion.entity';
 import { CajaMensual } from '../modules/cajas-mensuales/caja-mensual.entity';
 import { logger } from '../common/utils/logger';

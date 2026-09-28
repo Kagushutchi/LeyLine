@@ -6,15 +6,9 @@ import { loggerMiddleware } from './common/middlewares/logger.middleware';
 import { errorHandlerMiddleware } from './common/middlewares/error.middleware';
 
 // Entidades
-import { Suscriptor } from './modules/suscriptores/suscriptor.entity';
 import { Suscripcion } from './modules/suscripciones/suscripcion.entity';
 import { CajaMensual } from './modules/cajas-mensuales/caja-mensual.entity';
 
-// Módulos: Suscriptores
-import { SuscriptorRepository } from './modules/suscriptores/suscriptor.repository';
-import { SuscriptorService } from './modules/suscriptores/suscriptor.service';
-import { SuscriptorController } from './modules/suscriptores/suscriptor.controller';
-import { createSuscriptorRouter } from './modules/suscriptores/suscriptor.routes';
 
 // Módulos: Suscripciones
 import { SuscripcionRepository } from './modules/suscripciones/suscripcion.repository';
@@ -27,9 +21,17 @@ import { CajaMensualRepository } from './modules/cajas-mensuales/caja-mensual.re
 import { CajaMensualService } from './modules/cajas-mensuales/caja-mensual.service';
 import { CajaMensualController } from './modules/cajas-mensuales/caja-mensual.controller';
 import { createCajaMensualRouter } from './modules/cajas-mensuales/caja-mensual.routes';
+import { DataSource } from 'typeorm';
+import DBEngineFactory from './common/patterns/factory/db-engine-factory';
+import suscriptoresRouter from './modules/suscriptores/presentation/suscriptores-router';
 
-export const createApp = (): Application => {
+export let dataSource: DataSource;
+
+export const createApp = async (): Promise<Application> => {
   const app: Application = express();
+
+  const database = DBEngineFactory.createDBEngine();
+  dataSource = await database.connectDB();
 
   // Middlewares globales
   app.use(cors({ origin: envConfig.corsOrigin }));
@@ -47,12 +49,8 @@ export const createApp = (): Application => {
   });
 
   // Inyección de dependencias y ensamblado de rutas
-  // Suscriptores
-  const suscriptorRepo = new SuscriptorRepository(AppDataSource.getRepository(Suscriptor));
-  const suscriptorService = new SuscriptorService(suscriptorRepo);
-  const suscriptorController = new SuscriptorController(suscriptorService);
-  app.use('/api/suscriptores', createSuscriptorRouter(suscriptorController));
-
+  app.use('/api/suscriptores', suscriptoresRouter);
+  
   // Suscripciones
   const suscripcionRepo = new SuscripcionRepository(AppDataSource.getRepository(Suscripcion));
   const suscripcionService = new SuscripcionService(suscripcionRepo);

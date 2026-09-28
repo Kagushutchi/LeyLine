@@ -1,5 +1,5 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { Suscriptor } from '../suscriptores/suscriptor.entity';
+import { Suscriptor } from '../suscriptores/infrastructure/suscriptor.entity';
 
 export type EstadoSuscripcion = 'activa' | 'pausada' | 'cancelada';
 export type CategoriaClub = 'vinos' | 'cafes' | 'cervezas';
