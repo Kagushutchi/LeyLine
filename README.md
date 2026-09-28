@@ -1,3 +1,5 @@
+
+![LeyLine](/docs/LeyLine.png)
 # ClubCurator | Plataforma SaaS de Clubes de Suscripción
 
 > **SaaS llave en mano** para que creadores de marcas de nicho (vinos, cafés o cervezas artesanales) puedan lanzar y automatizar clubes de membresías mensuales con envíos personalizados.
@@ -19,7 +21,7 @@
 
 Para ver la explicación detallada de la arquitectura modular, patrones de diseño aplicados (Repository, Factory, Strategy, Observer, Facade), configuración de persistencia dual (SQLite / PostgreSQL) y guía de ejecución local o con Docker, consulta el archivo:
 
-👉 **[ARCHITECTURE.md](ARCHITECTURE.md)**
+**[ARCHITECTURE.md](ARCHITECTURE.md)**
 
 ---
 

@@ -10,7 +10,7 @@ async function bootstrap(): Promise<void> {
     await AppDataSource.initialize();
     logger.info(`Base de datos conectada correctamente [Motor: ${envConfig.db.type}]`);
 
-    const app = createApp();
+    const app = await createApp();
 
     const server = app.listen(envConfig.port, () => {
       logger.info(`Servidor escuchando en http://localhost:${envConfig.port}`);
