@@ -4,18 +4,21 @@ import { envConfig } from './config/env.config';
 import { loggerMiddleware } from './common/middlewares/logger.middleware';
 import { errorHandlerMiddleware } from './common/middlewares/error.middleware';
 import { DataSource } from 'typeorm';
-import { AppDataSource } from './config/database.config';
 
+import  DBEngineFactory  from './common/patterns/factory/db-engine-factory';
 // Routers de presentación (Arquitectura DDD)
 import suscriptoresRouter from './modules/suscriptores/presentation/suscriptores-router';
 import suscripcionesRouter from './modules/suscripciones/presentation/suscripciones-router';
 import cajasMensualesRouter from './modules/cajas-mensuales/presentation/cajas-mensuales-router';
 import productosRouter from './modules/productos/presentation/productos-router';
 
-export const dataSource: DataSource = AppDataSource;
+export let dataSource: DataSource;
 
 export const createApp = async (): Promise<Application> => {
   const app: Application = express();
+  const database = DBEngineFactory.createDBEngine();
+  dataSource = await database.connectDB();
+  dataSource.synchronize();
 
   if (!dataSource.isInitialized) {
     await dataSource.initialize();
