@@ -20,10 +20,17 @@ export const useSuscriptoresStore = defineStore('suscriptores', () => {
     }
   };
 
+  const createSuscriptor = async (payload: Partial<SuscriptorDTO>) => {
+    const response = await suscriptoresService.create(payload);
+    suscriptores.value.unshift(response.data);
+    return response.data;
+  };
+
   return {
     suscriptores,
     loading,
     error,
     fetchSuscriptores,
+    createSuscriptor,
   };
 });

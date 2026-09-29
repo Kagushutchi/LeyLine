@@ -20,10 +20,17 @@ export const useCajasMensualesStore = defineStore('cajasMensuales', () => {
     }
   };
 
+  const createCaja = async (payload: Partial<CajaMensualDTO>) => {
+    const response = await cajasMensualesService.create(payload);
+    cajas.value.unshift(response.data);
+    return response.data;
+  };
+
   return {
     cajas,
     loading,
     error,
     fetchCajas,
+    createCaja,
   };
 });

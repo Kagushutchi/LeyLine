@@ -1,4 +1,4 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import SuscriptoresController from "./controller";
 
 class SuscriptoresRouter
@@ -22,9 +22,13 @@ class SuscriptoresRouter
     {
         const router = Router();
 
-        router.get(this.BASE_URL, async (req: Request, res: Response) => {
-            const result = await this.controller.getSuscriptores();
-            res.send(result);
+        router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
+            try {
+                const result = await this.controller.getSuscriptores();
+                res.status(200).json({ status: 'success', data: result });
+            } catch (error) {
+                next(error);
+            }
         });
         
         router.get(`${this.BASE_URL}/:id`, async (req: Request, res: Response) => {
@@ -33,9 +37,13 @@ class SuscriptoresRouter
             res.send(result);
         });
 
-        router.post(this.BASE_URL, async (req: Request, res: Response) => {
-            const result = await this.controller.createSuscriptor(req.body);
-            res.send(result);
+        router.post(this.BASE_URL, async (req: Request, res: Response, next: NextFunction) => {
+            try {
+                const result = await this.controller.createSuscriptor(req.body);
+                res.status(201).json({ status: 'success', data: result });
+            } catch (error) {
+                next(error);
+            }
         });
         
         router.put(`${this.BASE_URL}/:id`, async (req: Request, res: Response) => {
