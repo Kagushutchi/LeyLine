@@ -15,6 +15,8 @@ export default class UpdateSuscripcion {
       throw new AppError(`Suscripción con ID ${id} no encontrada`, 404);
     }
 
-    return await this.repository.update(id, payload);
+    const updated = await this.repository.update(id, payload);
+    if (!updated) throw new AppError(`Suscripción con ID ${id} no encontrada`, 404);
+    return updated;
   }
 }

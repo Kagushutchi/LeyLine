@@ -1,6 +1,7 @@
 import { Suscriptor } from "../../infrastructure/suscriptor.entity";;
 import { IBaseRepository } from "../../../../common/interfaces/base-repository.interface";
 import { SuscriptorRepository } from "../../infrastructure/suscriptor-repository";
+import { AppError } from "../../../../common/errors/app-error";
 
 export default class DeleteSuscriptor
 {
@@ -12,7 +13,17 @@ export default class DeleteSuscriptor
     }
     async execute(id: string | number): Promise<any>
     {
-        const result = await this.repository.delete(id);
+        let result: Suscriptor;
+
+        try
+        {
+            result = await this.repository.delete(id);
+        }
+        catch
+        {
+            throw new AppError('Cliente no encontrado', 404);
+        }
+
         return { success: result, id };
     }
 }

@@ -1,12 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-
-export interface VariedadProductoItem {
-  nombre: string;
-  productorBodega: string;
-  tipo: string;
-  perfilNotas: string[];
-  cantidad: number;
-}
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { CajaMensualProducto } from './caja-mensual-producto.entity';
 
 /**
  * Componente de Dominio: CajaMensual (Producto)
@@ -35,11 +28,11 @@ export class CajaMensual {
   @Column({ type: 'decimal', precision: 10, scale: 2 })
   precioBase: number;
 
-  /**
-   * Variedades o botellas que componen la caja
-   */
-  @Column({ type: 'simple-json', nullable: true })
-  items?: VariedadProductoItem[];
+  @OneToMany(() => CajaMensualProducto, (composicion) => composicion.cajaMensual, {
+    cascade: ['insert', 'update'],
+    orphanedRowAction: 'delete',
+  })
+  composiciones: CajaMensualProducto[];
 
   @Column({ type: 'boolean', default: true })
   disponible: boolean;

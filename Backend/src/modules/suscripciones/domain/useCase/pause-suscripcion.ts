@@ -18,6 +18,8 @@ export default class PauseSuscripcion {
       throw new AppError(`Solo se pueden pausar suscripciones activas (estado actual: ${suscripcion.estado})`, 400);
     }
 
-    return await this.repository.update(id, { estado: 'pausada' });
+    const updated = await this.repository.update(id, { estado: 'pausada' });
+    if (!updated) throw new AppError(`Suscripción con ID ${id} no encontrada`, 404);
+    return updated;
   }
 }

@@ -12,13 +12,27 @@ export default class CreateSuscriptor
         this.repository = new SuscriptorRepository();
     }
 
-    async execute(payload: Suscriptor): Promise<any>
+    async execute(payload: Partial<Suscriptor>): Promise<Suscriptor>
     {
-        if (!payload.email) 
+        if (!payload.nombre?.trim())
         {
-            throw new AppError('El email es requerido para registrar un suscriptor', 400);
+            throw new AppError('El nombre es requerido para registrar un cliente', 400);
+        }
+
+        if (!payload.email?.trim())
+        {
+            throw new AppError('El email es requerido para registrar un cliente', 400);
+        }
+
+        if (!/^\S+@\S+\.\S+$/.test(payload.email))
+        {
+            throw new AppError('El email no tiene un formato válido', 400);
         }
         
-        return await this.repository.save(payload);
+        return await this.repository.save({
+            ...payload,
+            nombre: payload.nombre.trim(),
+            email: payload.email.trim().toLowerCase(),
+        } as Suscriptor);
     }
 }

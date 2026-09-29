@@ -18,6 +18,8 @@ export default class CancelSuscripcion {
       throw new AppError('La suscripción ya se encuentra cancelada', 400);
     }
 
-    return await this.repository.update(id, { estado: 'cancelada' });
+    const updated = await this.repository.update(id, { estado: 'cancelada' });
+    if (!updated) throw new AppError(`Suscripción con ID ${id} no encontrada`, 404);
+    return updated;
   }
 }

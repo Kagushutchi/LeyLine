@@ -7,7 +7,9 @@ import { logger } from './common/utils/logger';
 async function bootstrap(): Promise<void> {
   try {
     logger.info('Iniciando conexión a base de datos...');
-    await AppDataSource.initialize();
+    if (!AppDataSource.isInitialized) {
+      await AppDataSource.initialize();
+    }
     logger.info(`Base de datos conectada correctamente [Motor: ${envConfig.db.type}]`);
 
     const app = await createApp();

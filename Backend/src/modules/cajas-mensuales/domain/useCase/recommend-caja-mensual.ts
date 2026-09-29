@@ -26,15 +26,7 @@ export default class RecommendCajaMensual {
       descripcion: `Selección curada en base a las preferencias organolépticas del suscriptor (${suscriptorId})`,
       precioBase: 12500.00,
       disponible: true,
-      items: [
-        {
-          nombre: `Selección Especial ${categoriaPreferida}`,
-          productorBodega: 'Bodega / Tostador Reserva',
-          tipo: 'Premium Selection',
-          perfilNotas: preferencias?.perfilSabor || ['Intenso', 'Equilibrado'],
-          cantidad: 2,
-        },
-      ],
+      composiciones: [],
     };
   }
 }

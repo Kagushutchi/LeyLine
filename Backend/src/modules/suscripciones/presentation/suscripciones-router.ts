@@ -27,10 +27,19 @@ class SuscripcionesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}cliente/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { suscriptorId } = req.params;
         const result = await this.controller.getSuscripcionesBySuscriptor(suscriptorId);
+        res.status(200).json({ status: 'success', data: result });
+      } catch (error) {
+        next(error);
+      }
+    });
+
+    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const result = await this.controller.getSuscripcionesBySuscriptor(req.params.suscriptorId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);

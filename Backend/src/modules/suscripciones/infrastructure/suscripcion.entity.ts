@@ -1,12 +1,13 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Suscriptor } from '../../suscriptores/infrastructure/suscriptor.entity';
+import { CajaMensual } from '../../cajas-mensuales/infrastructure/caja-mensual.entity';
 
 export type EstadoSuscripcion = 'activa' | 'pausada' | 'cancelada';
 export type CategoriaClub = 'vinos' | 'cafes' | 'cervezas';
 
 /**
  * Componente de Dominio: Suscripción (Pedido Recurrente)
- * Modela la membresía y el pedido mensual recurrente del suscriptor.
+ * Modela qué suscriptor contrata qué caja mensual.
  */
 @Entity('suscripciones')
 export class Suscripcion {
@@ -19,6 +20,13 @@ export class Suscripcion {
   @ManyToOne(() => Suscriptor, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'suscriptorId' })
   suscriptor: Suscriptor;
+
+  @Column({ type: 'uuid' })
+  cajaMensualId: string;
+
+  @ManyToOne(() => CajaMensual, { onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'cajaMensualId' })
+  cajaMensual: CajaMensual;
 
   @Column({ type: 'varchar', length: 50 })
   categoria: CategoriaClub;

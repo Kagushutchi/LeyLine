@@ -1,10 +1,8 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { envConfig } from './env.config';
-import { Suscriptor } from '../modules/suscriptores/infrastructure/suscriptor.entity';
-import { Suscripcion } from '../modules/suscripciones/infrastructure/suscripcion.entity';
-import { CajaMensual } from '../modules/cajas-mensuales/infrastructure/caja-mensual.entity';
 import { logger } from '../common/utils/logger';
+import { entities } from '../common/patterns/factory/entities';
 
 /**
  * Patrón Factory: DatabaseFactory
@@ -25,7 +23,7 @@ export class DatabaseFactory {
         database: envConfig.db.database,
         synchronize: envConfig.db.synchronize,
         logging: envConfig.db.logging,
-        entities: [Suscriptor, Suscripcion, CajaMensual],
+        entities,
         migrations: [__dirname + '/../migrations/*.{ts,js}'],
       });
     }
@@ -36,7 +34,7 @@ export class DatabaseFactory {
       database: envConfig.db.sqlitePath,
       synchronize: envConfig.db.synchronize,
       logging: envConfig.db.logging,
-      entities: [Suscriptor, Suscripcion, CajaMensual],
+      entities,
       migrations: [__dirname + '/../migrations/*.{ts,js}'],
     });
   }

@@ -1,4 +1,4 @@
-import { EntitySchema, FindOptionsWhere, IsNull, ObjectLiteral, Repository } from "typeorm";
+import { FindOptionsWhere, ObjectLiteral, Repository } from "typeorm";
 import { IBaseRepository } from "../interfaces/base-repository.interface";
 
 abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T> {
@@ -28,7 +28,7 @@ abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T
     }
 
     async findAll(): Promise<T[]> {
-        return await this.repository.find({ where: { deletedAt: IsNull() } } as FindOptionsWhere<any>);
+        return await this.repository.find();
     }
 
 }
