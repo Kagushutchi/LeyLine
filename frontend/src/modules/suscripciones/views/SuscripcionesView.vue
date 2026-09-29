@@ -2,129 +2,295 @@
   <div class="container">
     <div class="view-header">
       <div>
-        <h1>Suscripciones (Pedidos Recurrentes)</h1>
-        <p class="subtitle">Control de estados, periodicidad y cobros automáticos.</p>
+        <h1 class="view-title">Suscripciones (Membresías)</h1>
+        <p class="view-subtitle">Control de cobros periódicos, asignación de cajas y estados de membresía.</p>
       </div>
       <button class="btn btn-primary" @click="openCreateModal">
         + Nueva Suscripción
       </button>
     </div>
 
+    <!-- Feedback -->
+    <div v-if="successMessage" class="alert alert-success">
+      {{ successMessage }}
+    </div>
+
     <!-- Estado de Carga -->
-    <div v-if="store.loading" class="card loading-state">
-      <p>Cargando suscripciones...</p>
+    <div v-if="store.loading && store.suscripciones.length === 0" class="state-box">
+      <h3 class="state-title">Cargando membresías</h3>
+      <p class="state-desc">Recuperando suscripciones activas del sistema...</p>
     </div>
 
     <!-- Estado de Error -->
-    <div v-else-if="store.error" class="card error-state">
-      <p>Error: {{ store.error }}</p>
-      <button class="btn btn-secondary" @click="store.fetchSuscripciones">Reintentar</button>
+    <div v-else-if="store.error && store.suscripciones.length === 0" class="state-box">
+      <h3 class="state-title">Error al consultar datos</h3>
+      <p class="state-desc">{{ store.error }}</p>
+      <button class="btn btn-secondary" @click="loadData">Reintentar</button>
     </div>
 
-    <!-- Lista vacía o contenido -->
-    <div v-else-if="store.suscripciones.length === 0" class="card empty-state">
-      <p>No hay suscripciones activas registradas.</p>
-      <span class="text-muted">Crea una nueva suscripción asociada a un suscriptor para comenzar.</span>
+    <!-- Estado Vacío -->
+    <div v-else-if="store.suscripciones.length === 0" class="state-box">
+      <h3 class="state-title">Sin suscripciones registradas</h3>
+      <p class="state-desc">Asocia suscriptores a sus cajas mensuales para comenzar el flujo de recurrencia.</p>
+      <button class="btn btn-primary" @click="openCreateModal">+ Crear Primer Suscripción</button>
     </div>
 
-    <div v-else class="grid-cards">
-      <div v-for="item in store.suscripciones" :key="item.id" class="card">
-        <div class="card-header">
-          <span class="badge badge-primary">{{ item.categoria }}</span>
-          <span class="badge" :class="item.estado === 'activa' ? 'badge-success' : 'badge-warning'">
-            {{ item.estado }}
-          </span>
-        </div>
-        <h3>${{ Number(item.montoMensual).toLocaleString() }} / mes</h3>
-        <p class="subscriber-info" v-if="item.suscriptor">
-          <strong>Suscriptor:</strong> {{ item.suscriptor.nombre }} ({{ item.suscriptor.email }})
-        </p>
-        <div class="actions">
-          <button class="btn btn-secondary btn-sm" @click="pauseSubscription(item.id)">
-            Pausar
-          </button>
-          <button class="btn btn-secondary btn-sm" @click="cancelSubscription(item.id)">
-            Cancelar
-          </button>
-        </div>
-      </div>
+    <!-- Tabla de Suscripciones -->
+    <div v-else class="table-container">
+      <table class="luxury-table">
+        <thead>
+          <tr>
+            <th>Suscriptor</th>
+            <th>Caja Asignada</th>
+            <th>Categoría</th>
+            <th>Monto Mensual</th>
+            <th>Próximo Cobro</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in store.suscripciones" :key="item.id">
+            <td>
+              <div class="member-name">{{ getSuscriptorName(item) }}</div>
+              <span class="text-muted" style="font-size: 0.75rem;">ID: {{ item.suscriptorId.substring(0, 8) }}...</span>
+            </td>
+            <td>
+              <div>{{ getCajaName(item) }}</div>
+            </td>
+            <td>
+              <span class="badge badge-outline">
+                {{ formatCategoria(item.categoria) }}
+              </span>
+            </td>
+            <td>
+              <span class="currency-amount">${{ Number(item.montoMensual).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span>
+            </td>
+            <td>
+              <span>{{ formatDate(item.proximoCobro) }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="statusBadgeClass(item.estado)">
+                {{ item.estado }}
+              </span>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button
+                  v-if="item.estado === 'activa'"
+                  class="btn btn-secondary btn-sm"
+                  title="Pausar Suscripción"
+                  @click="handlePause(item.id)"
+                >
+                  Pausar
+                </button>
+                <button
+                  v-if="item.estado !== 'cancelada'"
+                  class="btn btn-secondary btn-sm"
+                  title="Cancelar Suscripción"
+                  @click="handleCancel(item.id)"
+                >
+                  Cancelar
+                </button>
+                <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
+                  Modificar
+                </button>
+                <button class="btn btn-danger btn-sm" @click="confirmDelete(item)">
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
+    <!-- Modal Crear / Modificar -->
+    <SuscripcionModal
+      :is-open="isModalOpen"
+      :suscripcion="selectedItem"
+      :suscriptores-list="suscriptoresStore.suscriptores"
+      :cajas-list="cajasStore.cajas"
+      :saving="isSaving"
+      @close="isModalOpen = false"
+      @save="handleSave"
+    />
+
+    <!-- Modal Confirmar Eliminación -->
+    <ConfirmModal
+      :is-open="isDeleteModalOpen"
+      title="Eliminar Suscripción"
+      message="¿Estás seguro de que deseas eliminar permanentemente este registro de suscripción? Esta acción no se puede deshacer."
+      confirm-label="Eliminar Suscripción"
+      :loading="isDeleting"
+      @confirm="handleDelete"
+      @cancel="isDeleteModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useSuscripcionesStore } from '../store/suscripciones.store';
+import { useSuscriptoresStore } from '../../suscriptores/store/suscriptores.store';
+import { useCajasMensualesStore } from '../../cajas-mensuales/store/cajas-mensuales.store';
+import { SuscripcionDTO } from '../services/suscripciones.service';
+import SuscripcionModal from '../components/SuscripcionModal.vue';
+import ConfirmModal from '@/common/components/ConfirmModal.vue';
 
 const store = useSuscripcionesStore();
+const suscriptoresStore = useSuscriptoresStore();
+const cajasStore = useCajasMensualesStore();
+
+const isModalOpen = ref(false);
+const selectedItem = ref<SuscripcionDTO | null>(null);
+const isSaving = ref(false);
+
+const isDeleteModalOpen = ref(false);
+const itemToDelete = ref<SuscripcionDTO | null>(null);
+const isDeleting = ref(false);
+
+const successMessage = ref('');
+
+const loadData = async () => {
+  await Promise.all([
+    store.fetchSuscripciones(),
+    suscriptoresStore.fetchSuscriptores(),
+    cajasStore.fetchCajas(),
+  ]);
+};
 
 onMounted(() => {
-  store.fetchSuscripciones();
+  loadData();
 });
 
+const getSuscriptorName = (item: SuscripcionDTO) => {
+  if (item.suscriptor?.nombre) {
+    return `${item.suscriptor.nombre} ${item.suscriptor.apellido || ''}`.trim();
+  }
+  const match = suscriptoresStore.suscriptores.find((s) => s.id === item.suscriptorId);
+  return match ? `${match.nombre} ${match.apellido || ''}`.trim() : item.suscriptorId;
+};
+
+const getCajaName = (item: SuscripcionDTO) => {
+  if (item.cajaMensual?.nombre) {
+    return item.cajaMensual.nombre;
+  }
+  const match = cajasStore.cajas.find((c) => c.id === item.cajaMensualId);
+  return match ? match.nombre : item.cajaMensualId;
+};
+
+const formatCategoria = (cat: string) => {
+  if (cat === 'vinos') return 'Vinos';
+  if (cat === 'cafes') return 'Café';
+  if (cat === 'cervezas') return 'Cervezas';
+  return cat;
+};
+
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? dateStr : d.toLocaleDateString('es-AR');
+  } catch {
+    return dateStr;
+  }
+};
+
+const statusBadgeClass = (status: string) => {
+  switch (status) {
+    case 'activa':
+      return 'badge-success';
+    case 'pausada':
+      return 'badge-warning';
+    case 'cancelada':
+      return 'badge-danger';
+    default:
+      return 'badge-outline';
+  }
+};
+
 const openCreateModal = () => {
-  // TODO: Modal de alta de suscripción
-  console.log('Abrir modal de suscripción');
+  selectedItem.value = null;
+  isModalOpen.value = true;
 };
 
-const pauseSubscription = (id: string) => {
-  // TODO: Implementar pausa
-  console.log('Pausar suscripción', id);
+const openEditModal = (item: SuscripcionDTO) => {
+  selectedItem.value = item;
+  isModalOpen.value = true;
 };
 
-const cancelSubscription = (id: string) => {
-  // TODO: Implementar cancelación
-  console.log('Cancelar suscripción', id);
+const handleSave = async (payload: Partial<SuscripcionDTO>) => {
+  isSaving.value = true;
+  try {
+    if (selectedItem.value?.id) {
+      await store.updateSuscripcion(selectedItem.value.id, payload);
+      showSuccess('Suscripción modificada exitosamente.');
+    } else {
+      await store.createSuscripcion(payload);
+      showSuccess('Suscripción creada exitosamente.');
+    }
+    isModalOpen.value = false;
+  } catch (error) {
+    console.error('Error al guardar suscripción:', error);
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const handlePause = async (id: string) => {
+  try {
+    await store.pauseSuscripcion(id);
+    showSuccess('Suscripción pausada.');
+  } catch (error) {
+    console.error('Error al pausar:', error);
+  }
+};
+
+const handleCancel = async (id: string) => {
+  try {
+    await store.cancelSuscripcion(id);
+    showSuccess('Suscripción cancelada.');
+  } catch (error) {
+    console.error('Error al cancelar:', error);
+  }
+};
+
+const confirmDelete = (item: SuscripcionDTO) => {
+  itemToDelete.value = item;
+  isDeleteModalOpen.value = true;
+};
+
+const handleDelete = async () => {
+  if (!itemToDelete.value?.id) return;
+  isDeleting.value = true;
+  try {
+    await store.deleteSuscripcion(itemToDelete.value.id);
+    showSuccess('Suscripción eliminada.');
+    isDeleteModalOpen.value = false;
+  } catch (error) {
+    console.error('Error al eliminar:', error);
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+const showSuccess = (msg: string) => {
+  successMessage.value = msg;
+  setTimeout(() => {
+    successMessage.value = '';
+  }, 4000);
 };
 </script>
 
 <style scoped>
-.view-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+.member-name {
+  font-weight: 600;
+  color: var(--color-dark);
 }
 
-.subtitle {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-top: 0.25rem;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 1rem;
-}
-
-.subscriber-info {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin: 0.75rem 0 1.25rem 0;
-}
-
-.actions {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-.loading-state,
-.error-state,
-.empty-state {
-  text-align: center;
-  padding: 3rem 1.5rem;
-}
-
-.text-muted {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.5rem;
+.currency-amount {
+  font-weight: 600;
+  color: var(--color-dark);
 }
 </style>

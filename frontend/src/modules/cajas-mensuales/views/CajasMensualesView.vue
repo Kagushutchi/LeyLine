@@ -2,127 +2,226 @@
   <div class="container">
     <div class="view-header">
       <div>
-        <h1>Cajas Mensuales (Productos)</h1>
-        <p class="subtitle">Catálogo de cajas temáticas y combinaciones recomendadas por IA.</p>
+        <h1 class="view-title">Cajas Mensuales (Catálogo)</h1>
+        <p class="view-subtitle">Curaduría temática de selecciones mensuales para vinos, cafés y cervezas.</p>
       </div>
       <button class="btn btn-primary" @click="openCreateModal">
         + Nueva Caja Mensual
       </button>
     </div>
 
+    <!-- Feedback -->
+    <div v-if="successMessage" class="alert alert-success">
+      {{ successMessage }}
+    </div>
+
     <!-- Estado de Carga -->
-    <div v-if="store.loading" class="card loading-state">
-      <p>Cargando cajas mensuales...</p>
+    <div v-if="store.loading && store.cajas.length === 0" class="state-box">
+      <h3 class="state-title">Cargando catálogo</h3>
+      <p class="state-desc">Recuperando cajas temáticas mensuales...</p>
     </div>
 
     <!-- Estado de Error -->
-    <div v-else-if="store.error" class="card error-state">
-      <p>Error: {{ store.error }}</p>
+    <div v-else-if="store.error && store.cajas.length === 0" class="state-box">
+      <h3 class="state-title">Error al consultar catálogo</h3>
+      <p class="state-desc">{{ store.error }}</p>
       <button class="btn btn-secondary" @click="store.fetchCajas">Reintentar</button>
     </div>
 
-    <!-- Lista vacía o contenido -->
-    <div v-else-if="store.cajas.length === 0" class="card empty-state">
-      <p>No hay cajas configuradas en el catálogo actual.</p>
-      <span class="text-muted">Crea una caja mensual para el ciclo actual de suscripción.</span>
+    <!-- Estado Vacío -->
+    <div v-else-if="store.cajas.length === 0" class="state-box">
+      <h3 class="state-title">Sin cajas mensuales registradas</h3>
+      <p class="state-desc">Crea tu primera selección mensual temática para los suscriptores.</p>
+      <button class="btn btn-primary" @click="openCreateModal">+ Crear Primer Caja</button>
     </div>
 
-    <div v-else class="grid-cards">
-      <div v-for="item in store.cajas" :key="item.id" class="card">
-        <div class="card-header">
-          <span class="badge badge-primary">{{ item.categoria }}</span>
-          <span class="badge badge-warning">Mes {{ item.mes }}/{{ item.anio }}</span>
-        </div>
-        <h3>{{ item.nombre }}</h3>
-        <p class="description">{{ item.descripcion || 'Sin descripción disponible.' }}</p>
-        <div class="card-footer">
-          <span class="price">${{ Number(item.precioBase).toLocaleString() }}</span>
-          <button class="btn btn-secondary btn-sm" @click="previewBox(item.id)">
-            Detalles
-          </button>
-        </div>
-      </div>
+    <!-- Tabla de Cajas Mensuales -->
+    <div v-else class="table-container">
+      <table class="luxury-table">
+        <thead>
+          <tr>
+            <th>Selección / Caja</th>
+            <th>Categoría</th>
+            <th>Período</th>
+            <th>Precio Base</th>
+            <th>Disponibilidad</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in store.cajas" :key="item.id">
+            <td>
+              <div class="box-name">{{ item.nombre }}</div>
+              <p v-if="item.descripcion" class="box-desc">{{ item.descripcion }}</p>
+            </td>
+            <td>
+              <span class="badge badge-dark">
+                {{ formatCategoria(item.categoria) }}
+              </span>
+            </td>
+            <td>
+              <span class="period-label">{{ getMesName(item.mes) }} {{ item.anio }}</span>
+            </td>
+            <td>
+              <span class="currency-amount">${{ Number(item.precioBase).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="item.disponible ? 'badge-success' : 'badge-warning'">
+                {{ item.disponible ? 'Disponible' : 'Agotada / Pausada' }}
+              </span>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
+                  Modificar
+                </button>
+                <button class="btn btn-danger btn-sm" @click="confirmDelete(item)">
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
+    <!-- Modal Formulario -->
+    <CajaMensualModal
+      :is-open="isModalOpen"
+      :caja="selectedItem"
+      :saving="isSaving"
+      @close="isModalOpen = false"
+      @save="handleSave"
+    />
+
+    <!-- Modal Confirmación Eliminación -->
+    <ConfirmModal
+      :is-open="isDeleteModalOpen"
+      title="Eliminar Caja Mensual"
+      :message="`¿Estás seguro de que deseas eliminar permanentemente la caja '${itemToDelete?.nombre || ''}'? Esta acción no se puede deshacer.`"
+      confirm-label="Eliminar Caja"
+      :loading="isDeleting"
+      @confirm="handleDelete"
+      @cancel="isDeleteModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useCajasMensualesStore } from '../store/cajas-mensuales.store';
+import { CajaMensualDTO } from '../services/cajas-mensuales.service';
+import CajaMensualModal from '../components/CajaMensualModal.vue';
+import ConfirmModal from '@/common/components/ConfirmModal.vue';
 
 const store = useCajasMensualesStore();
+
+const isModalOpen = ref(false);
+const selectedItem = ref<CajaMensualDTO | null>(null);
+const isSaving = ref(false);
+
+const isDeleteModalOpen = ref(false);
+const itemToDelete = ref<CajaMensualDTO | null>(null);
+const isDeleting = ref(false);
+
+const successMessage = ref('');
+
+const meses = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+];
 
 onMounted(() => {
   store.fetchCajas();
 });
 
-const openCreateModal = () => {
-  // TODO: Modal de creación de caja
-  console.log('Abrir modal de caja mensual');
+const formatCategoria = (cat: string) => {
+  if (cat === 'vinos') return 'Vinos';
+  if (cat === 'cafes') return 'Café';
+  if (cat === 'cervezas') return 'Cervezas';
+  return cat;
 };
 
-const previewBox = (id: string) => {
-  // TODO: Modal de detalle de caja y botellas
-  console.log('Ver detalle de caja', id);
+const getMesName = (m: number) => {
+  return meses[m - 1] || `Mes ${m}`;
+};
+
+const openCreateModal = () => {
+  selectedItem.value = null;
+  isModalOpen.value = true;
+};
+
+const openEditModal = (item: CajaMensualDTO) => {
+  selectedItem.value = item;
+  isModalOpen.value = true;
+};
+
+const handleSave = async (payload: Partial<CajaMensualDTO>) => {
+  isSaving.value = true;
+  try {
+    if (selectedItem.value?.id) {
+      await store.updateCaja(selectedItem.value.id, payload);
+      showSuccess('Caja mensual actualizada exitosamente.');
+    } else {
+      await store.createCaja(payload);
+      showSuccess('Caja mensual registrada exitosamente.');
+    }
+    isModalOpen.value = false;
+  } catch (error) {
+    console.error('Error al guardar caja mensual:', error);
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const confirmDelete = (item: CajaMensualDTO) => {
+  itemToDelete.value = item;
+  isDeleteModalOpen.value = true;
+};
+
+const handleDelete = async () => {
+  if (!itemToDelete.value?.id) return;
+  isDeleting.value = true;
+  try {
+    await store.deleteCaja(itemToDelete.value.id);
+    showSuccess('Caja mensual eliminada correctamente.');
+    isDeleteModalOpen.value = false;
+  } catch (error) {
+    console.error('Error al eliminar caja:', error);
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+const showSuccess = (msg: string) => {
+  successMessage.value = msg;
+  setTimeout(() => {
+    successMessage.value = '';
+  }, 4000);
 };
 </script>
 
 <style scoped>
-.view-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+.box-name {
+  font-weight: 600;
+  color: var(--color-dark);
 }
 
-.subtitle {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-top: 0.25rem;
+.box-desc {
+  font-size: 0.775rem;
+  color: var(--color-muted);
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0.15rem;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.75rem;
+.period-label {
+  font-weight: 500;
 }
 
-.description {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  margin: 0.75rem 0 1.25rem 0;
-}
-
-.card-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid var(--border-color);
-  padding-top: 0.75rem;
-}
-
-.price {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: #fff;
-}
-
-.btn-sm {
-  padding: 0.35rem 0.75rem;
-  font-size: 0.75rem;
-}
-
-.loading-state,
-.error-state,
-.empty-state {
-  text-align: center;
-  padding: 3rem 1.5rem;
-}
-
-.text-muted {
-  display: block;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.5rem;
+.currency-amount {
+  font-weight: 600;
 }
 </style>

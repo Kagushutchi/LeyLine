@@ -2,113 +2,225 @@
   <div class="container">
     <div class="view-header">
       <div>
-        <h1>Suscriptores (Clientes)</h1>
-        <p class="subtitle">Gestión de miembros y registro de preferencias organolépticas.</p>
+        <h1 class="view-title">Suscriptores (Clientes)</h1>
+        <p class="view-subtitle">Gestión de miembros exclusivos y registro de perfil organoléptico.</p>
       </div>
       <button class="btn btn-primary" @click="openCreateModal">
         + Nuevo Suscriptor
       </button>
     </div>
 
+    <!-- Mensajes de feedback -->
+    <div v-if="successMessage" class="alert alert-success">
+      {{ successMessage }}
+    </div>
+
     <!-- Estado de Carga -->
-    <div v-if="store.loading" class="card loading-state">
-      <p>Cargando lista de suscriptores...</p>
+    <div v-if="store.loading && store.suscriptores.length === 0" class="state-box">
+      <h3 class="state-title">Cargando suscriptores</h3>
+      <p class="state-desc">Recuperando registros del servidor...</p>
     </div>
 
     <!-- Estado de Error -->
-    <div v-else-if="store.error" class="card error-state">
-      <p>Error: {{ store.error }}</p>
+    <div v-else-if="store.error && store.suscriptores.length === 0" class="state-box">
+      <h3 class="state-title">Error al consultar datos</h3>
+      <p class="state-desc">{{ store.error }}</p>
       <button class="btn btn-secondary" @click="store.fetchSuscriptores">Reintentar</button>
     </div>
 
-    <!-- Lista vacía o contenido -->
-    <div v-else-if="store.suscriptores.length === 0" class="card empty-state">
-      <p>No hay suscriptores registrados todavía.</p>
-      <span class="text-muted">Utiliza el botón de arriba para registrar el primer suscriptor al club.</span>
+    <!-- Estado Vacío -->
+    <div v-else-if="store.suscriptores.length === 0" class="state-box">
+      <h3 class="state-title">Sin suscriptores registrados</h3>
+      <p class="state-desc">Comienza registrando al primer miembro para este club de especialidad.</p>
+      <button class="btn btn-primary" @click="openCreateModal">+ Crear Primer Suscriptor</button>
     </div>
 
-    <div v-else class="grid-cards">
-      <div v-for="item in store.suscriptores" :key="item.id" class="card">
-        <div class="card-header">
-          <h3>{{ item.nombre }}</h3>
-          <span class="badge" :class="item.activo ? 'badge-success' : 'badge-warning'">
-            {{ item.activo ? 'Activo' : 'Inactivo' }}
-          </span>
-        </div>
-        <p class="email">{{ item.email }}</p>
-        <div v-if="item.preferenciasOrganolepticas" class="preferences-box">
-          <strong>Club:</strong> {{ item.preferenciasOrganolepticas.categoria }}
-          <div v-if="item.preferenciasOrganolepticas.perfilSabor?.length">
-            <strong>Perfil:</strong> {{ item.preferenciasOrganolepticas.perfilSabor.join(', ') }}
-          </div>
-        </div>
-      </div>
+    <!-- Tabla de Datos -->
+    <div v-else class="table-container">
+      <table class="luxury-table">
+        <thead>
+          <tr>
+            <th>Miembro</th>
+            <th>Contacto</th>
+            <th>Club & Sabor</th>
+            <th>Ubicación</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="item in store.suscriptores" :key="item.id">
+            <td>
+              <div class="member-name">{{ item.nombre }} {{ item.apellido || '' }}</div>
+              <span v-if="item.documento" class="member-doc">Doc: {{ item.documento }}</span>
+            </td>
+            <td>
+              <div class="contact-email">{{ item.email }}</div>
+              <div v-if="item.telefono" class="contact-phone">{{ item.telefono }}</div>
+            </td>
+            <td>
+              <span class="badge badge-accent">
+                {{ formatCategoria(item.preferenciasOrganolepticas?.categoria) }}
+              </span>
+              <div v-if="item.preferenciasOrganolepticas?.perfilSabor?.length" class="flavor-notes">
+                {{ item.preferenciasOrganolepticas.perfilSabor.slice(0, 3).join(', ') }}
+              </div>
+            </td>
+            <td>
+              <span>{{ item.direccion?.ciudad || '—' }}</span>
+              <span v-if="item.direccion?.provincia" class="text-muted">, {{ item.direccion.provincia }}</span>
+            </td>
+            <td>
+              <span class="badge" :class="item.activo ? 'badge-success' : 'badge-warning'">
+                {{ item.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </td>
+            <td>
+              <div class="actions-cell">
+                <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
+                  Modificar
+                </button>
+                <button class="btn btn-danger btn-sm" @click="confirmDelete(item)">
+                  Eliminar
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+
+    <!-- Modal Formulario -->
+    <SuscriptorModal
+      :is-open="isModalOpen"
+      :suscriptor="selectedItem"
+      :saving="isSaving"
+      @close="isModalOpen = false"
+      @save="handleSave"
+    />
+
+    <!-- Modal Confirmación de Eliminación -->
+    <ConfirmModal
+      :is-open="isDeleteModalOpen"
+      title="Eliminar Suscriptor"
+      :message="`¿Estás seguro de que deseas eliminar permanentemente a ${itemToDelete?.nombre || 'este suscriptor'}? Esta acción no se puede deshacer.`"
+      confirm-label="Eliminar Suscriptor"
+      :loading="isDeleting"
+      @confirm="handleDelete"
+      @cancel="isDeleteModalOpen = false"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useSuscriptoresStore } from '../store/suscriptores.store';
+import { SuscriptorDTO } from '../services/suscriptores.service';
+import SuscriptorModal from '../components/SuscriptorModal.vue';
+import ConfirmModal from '@/common/components/ConfirmModal.vue';
 
 const store = useSuscriptoresStore();
+
+const isModalOpen = ref(false);
+const selectedItem = ref<SuscriptorDTO | null>(null);
+const isSaving = ref(false);
+
+const isDeleteModalOpen = ref(false);
+const itemToDelete = ref<SuscriptorDTO | null>(null);
+const isDeleting = ref(false);
+
+const successMessage = ref('');
 
 onMounted(() => {
   store.fetchSuscriptores();
 });
 
+const formatCategoria = (cat?: string) => {
+  if (cat === 'vinos') return 'Vinos';
+  if (cat === 'cafes') return 'Café';
+  if (cat === 'cervezas') return 'Cervezas';
+  return cat || 'General';
+};
+
 const openCreateModal = () => {
-  // TODO: Conectar modal o formulario para creación de suscriptores
-  console.log('Abrir modal de creación de suscriptor');
+  selectedItem.value = null;
+  isModalOpen.value = true;
+};
+
+const openEditModal = (item: SuscriptorDTO) => {
+  selectedItem.value = item;
+  isModalOpen.value = true;
+};
+
+const handleSave = async (payload: Partial<SuscriptorDTO>) => {
+  isSaving.value = true;
+  try {
+    if (selectedItem.value?.id) {
+      await store.updateSuscriptor(selectedItem.value.id, payload);
+      showSuccess('Suscriptor actualizado exitosamente.');
+    } else {
+      await store.createSuscriptor(payload);
+      showSuccess('Suscriptor registrado exitosamente.');
+    }
+    isModalOpen.value = false;
+  } catch (error) {
+    console.error('Error al guardar suscriptor:', error);
+  } finally {
+    isSaving.value = false;
+  }
+};
+
+const confirmDelete = (item: SuscriptorDTO) => {
+  itemToDelete.value = item;
+  isDeleteModalOpen.value = true;
+};
+
+const handleDelete = async () => {
+  if (!itemToDelete.value?.id) return;
+  isDeleting.value = true;
+  try {
+    await store.deleteSuscriptor(itemToDelete.value.id);
+    showSuccess('Suscriptor eliminado correctamente.');
+    isDeleteModalOpen.value = false;
+  } catch (error) {
+    console.error('Error al eliminar:', error);
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+const showSuccess = (msg: string) => {
+  successMessage.value = msg;
+  setTimeout(() => {
+    successMessage.value = '';
+  }, 4000);
 };
 </script>
 
 <style scoped>
-.view-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+.member-name {
+  font-weight: 600;
+  color: var(--color-dark);
 }
 
-.subtitle {
-  color: var(--text-secondary);
-  font-size: 0.95rem;
-  margin-top: 0.25rem;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.5rem;
-}
-
-.email {
-  color: var(--text-secondary);
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-}
-
-.preferences-box {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
-.loading-state,
-.error-state,
-.empty-state {
-  text-align: center;
-  padding: 3rem 1.5rem;
-}
-
-.text-muted {
+.member-doc {
   display: block;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+}
+
+.contact-email {
+  font-weight: 500;
+}
+
+.contact-phone {
+  font-size: 0.775rem;
+  color: var(--color-muted);
+}
+
+.flavor-notes {
+  font-size: 0.775rem;
+  color: var(--color-muted);
+  margin-top: 0.25rem;
 }
 </style>
