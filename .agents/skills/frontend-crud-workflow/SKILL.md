@@ -1,6 +1,6 @@
 ---
 name: frontend-crud-workflow
-description: Workflow and specifications for Vue 3 frontend development with ClubCurator luxury design system and full CRUD integration for all backend modules (Suscriptores, Suscripciones, Cajas Mensuales, Productos).
+description: Workflow and specifications for Vue 3 frontend development with ClubCurator luxury design system, full CRUD integration, toast notification feedback, and TypeORM backend troubleshooting.
 ---
 
 # SaaS Front-End UI & API Integration Specialist Skill
@@ -20,11 +20,37 @@ description: Workflow and specifications for Vue 3 frontend development with Clu
 ### Execution Rules:
 - **No Gradients**: Strictly solid colors, sharp borders, clean contrast.
 - **Micro-Animations**: Transitions 150ms - 200ms `ease-in-out` / `ease-out`.
-- **Aesthetic**: Minimalist luxury, high contrast, clean modal dialogs and data tables/cards.
+- **Aesthetic**: Minimalist luxury, high contrast, clean modal dialogs, data tables, and floating toast notifications.
 
 ---
 
-## 2. Backend Modules & Endpoints Overview
+## 2. Notification Feedback System (Toasts)
+
+Every CRUD operation MUST trigger an immediate, non-intrusive toast feedback:
+- **Creación**: `"X creado con éxito"` (ej: `"Producto creado con éxito"`, `"Suscriptor registrado con éxito"`).
+- **Modificación**: `"X modificado con éxito"` (ej: `"Suscripción modificada con éxito"`).
+- **Eliminación**: `"X eliminado con éxito"` (ej: `"Caja mensual eliminada con éxito"`).
+- **Acciones especiales**: `"Suscripción pausada con éxito"`, `"Suscripción cancelada con éxito"`.
+- **Manejo de Errores**: Captura de excepciones con mensaje de error del backend en toast de alerta rojo.
+
+Implemented via `useToastStore()` in `frontend/src/common/store/toast.store.ts` and rendered globally in `ToastNotification.vue`.
+
+---
+
+## 3. Backend Integration & Troubleshooting Checklist
+
+1. **TypeORM `Repository.delete` vs `Repository.remove`**:
+   - In `BaseTypeORM` (`Backend/src/common/classes/base-typeorm-repository.ts`), NEVER pass entity objects with relations (`OneToMany`, `ManyToOne`) to `this.repository.delete(el)`.
+   - ALWAYS use `await this.repository.remove(el)` to avoid the error `Cannot query across one-to-many for property composiciones`.
+2. **Express Router Path Concatenation**:
+   - Avoid double slashes in router definitions. Use literal paths `router.get('/')` and `router.get('/:id')`.
+   - Double slashes like `router.get('//:id')` result in `404 Not Found` for requests to `/api/<module>/:id`.
+3. **Entity Updates**:
+   - In TypeORM `update()`, fetch the entity using `findOneById`, merge properties with `Object.assign(entity, payload)` or `repository.merge`, and call `repository.save(entity)` to ensure JSON columns and lifecycle hooks run cleanly.
+
+---
+
+## 4. Backend Modules & Endpoints Overview
 
 | Module | Base URL | Endpoints | Key Fields |
 | :--- | :--- | :--- | :--- |
@@ -35,18 +61,12 @@ description: Workflow and specifications for Vue 3 frontend development with Clu
 
 ---
 
-## 3. CRUD Standard Implementation Architecture
+## 5. Step-by-Step Guide for Next Agents
 
-Each module follows the standard directory structure:
-```
-frontend/src/modules/<module-name>/
-├── services/
-│   └── <module>.service.ts    # Axios HTTP methods
-├── store/
-│   └── <module>.store.ts      # Pinia state management
-├── components/                # Modals (Create/Edit), Confirmation Dialogs
-│   ├── <Module>Modal.vue
-│   └── <Module>Card.vue / Table
-└── views/
-    └── <Module>View.vue       # Main listing view with Add/Edit/Delete triggers
-```
+1. **Verify Backend Build**: Run `cmd /c npm run build` in `Backend` directory if needed.
+2. **Verify Frontend Build**: Run `cmd /c npm run build` in `frontend` directory.
+3. **Module Extension Pattern**:
+   - Service in `src/modules/<name>/services/<name>.service.ts`
+   - Store in `src/modules/<name>/store/<name>.store.ts`
+   - Form Modal in `src/modules/<name>/components/<Name>Modal.vue`
+   - View Table/Cards in `src/modules/<name>/views/<Name>View.vue` with `useToastStore()` calls.

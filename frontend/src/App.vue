@@ -4,11 +4,13 @@
     <main class="main-content">
       <router-view />
     </main>
+    <ToastNotification />
   </div>
 </template>
 
 <script setup lang="ts">
 import AppNavbar from '@/common/components/AppNavbar.vue';
+import ToastNotification from '@/common/components/ToastNotification.vue';
 </script>
 
 <style scoped>

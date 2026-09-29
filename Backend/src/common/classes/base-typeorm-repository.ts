@@ -19,12 +19,17 @@ abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T
             throw "El registro a eliminar no existe";
         }
 
-        await this.repository.delete(el);
+        await this.repository.remove(el);
         return el;
     }
 
     async update(id: string | number, entity: any): Promise<any> {
-        return await this.repository.update(id, entity);
+        const el = await this.findOneById(id);
+        if (!el) {
+            throw "El registro a actualizar no existe";
+        }
+        Object.assign(el, entity);
+        return await this.repository.save(el);
     }
 
     async findAll(): Promise<T[]> {

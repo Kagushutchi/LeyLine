@@ -5,7 +5,6 @@ class SuscriptoresRouter
 {
     private router: Router;
     private controller: SuscriptoresController; 
-    private BASE_URL = '/'
 
     constructor()
     {
@@ -22,7 +21,7 @@ class SuscriptoresRouter
     {
         const router = Router();
 
-        router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
+        router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
             try {
                 const result = await this.controller.getSuscriptores();
                 res.status(200).json({ status: 'success', data: result });
@@ -31,7 +30,7 @@ class SuscriptoresRouter
             }
         });
         
-        router.get(`${this.BASE_URL}/:id`, async (req: Request, res: Response, next: NextFunction) => {
+        router.get('/:id', async (req: Request, res: Response, next: NextFunction) => {
             try {
                 const result = await this.controller.getSuscriptorById(req.params.id);
                 res.status(200).json({ status: 'success', data: result });
@@ -40,7 +39,7 @@ class SuscriptoresRouter
             }
         });
 
-        router.post(this.BASE_URL, async (req: Request, res: Response, next: NextFunction) => {
+        router.post('/', async (req: Request, res: Response, next: NextFunction) => {
             try {
                 const result = await this.controller.createSuscriptor(req.body);
                 res.status(201).json({ status: 'success', data: result });
@@ -49,7 +48,7 @@ class SuscriptoresRouter
             }
         });
         
-        router.put(`${this.BASE_URL}/:id`, async (req: Request, res: Response, next: NextFunction) => {
+        router.put('/:id', async (req: Request, res: Response, next: NextFunction) => {
             try {
                 const result = await this.controller.updateSuscriptor(req.params.id, req.body);
                 res.status(200).json({ status: 'success', data: result });
@@ -58,7 +57,7 @@ class SuscriptoresRouter
             }
         });
         
-        router.delete(`${this.BASE_URL}/:id`, async (req: Request, res: Response, next: NextFunction) => {
+        router.delete('/:id', async (req: Request, res: Response, next: NextFunction) => {
             try {
                 const result = await this.controller.deleteSuscriptor(req.params.id);
                 res.status(200).json({ status: 'success', data: result });

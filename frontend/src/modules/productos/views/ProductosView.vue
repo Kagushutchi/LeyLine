@@ -10,11 +10,6 @@
       </button>
     </div>
 
-    <!-- Feedback -->
-    <div v-if="successMessage" class="alert alert-success">
-      {{ successMessage }}
-    </div>
-
     <!-- Estado de Carga -->
     <div v-if="store.loading && store.productos.length === 0" class="state-box">
       <h3 class="state-title">Cargando inventario</h3>
@@ -124,11 +119,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useProductosStore } from '../store/productos.store';
+import { useToastStore } from '@/common/store/toast.store';
 import { ProductoDTO } from '../services/productos.service';
 import ProductoModal from '../components/ProductoModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
 
 const store = useProductosStore();
+const toast = useToastStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<ProductoDTO | null>(null);
@@ -137,8 +134,6 @@ const isSaving = ref(false);
 const isDeleteModalOpen = ref(false);
 const itemToDelete = ref<ProductoDTO | null>(null);
 const isDeleting = ref(false);
-
-const successMessage = ref('');
 
 onMounted(() => {
   store.fetchProductos();
@@ -166,14 +161,16 @@ const handleSave = async (payload: Partial<ProductoDTO>) => {
   try {
     if (selectedItem.value?.id) {
       await store.updateProducto(selectedItem.value.id, payload);
-      showSuccess('Producto actualizado exitosamente.');
+      toast.success('Producto modificado con éxito');
     } else {
       await store.createProducto(payload);
-      showSuccess('Producto registrado en bodega exitosamente.');
+      toast.success('Producto creado con éxito');
     }
     isModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al guardar producto:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo guardar el producto';
+    toast.error(msg, 'Error al guardar producto');
   } finally {
     isSaving.value = false;
   }
@@ -189,20 +186,15 @@ const handleDelete = async () => {
   isDeleting.value = true;
   try {
     await store.deleteProducto(itemToDelete.value.id);
-    showSuccess('Producto eliminado correctamente.');
+    toast.success('Producto eliminado con éxito');
     isDeleteModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al eliminar producto:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo eliminar el producto';
+    toast.error(msg, 'Error al eliminar');
   } finally {
     isDeleting.value = false;
   }
-};
-
-const showSuccess = (msg: string) => {
-  successMessage.value = msg;
-  setTimeout(() => {
-    successMessage.value = '';
-  }, 4000);
 };
 </script>
 

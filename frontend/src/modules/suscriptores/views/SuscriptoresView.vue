@@ -10,11 +10,6 @@
       </button>
     </div>
 
-    <!-- Mensajes de feedback -->
-    <div v-if="successMessage" class="alert alert-success">
-      {{ successMessage }}
-    </div>
-
     <!-- Estado de Carga -->
     <div v-if="store.loading && store.suscriptores.length === 0" class="state-box">
       <h3 class="state-title">Cargando suscriptores</h3>
@@ -115,11 +110,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useSuscriptoresStore } from '../store/suscriptores.store';
+import { useToastStore } from '@/common/store/toast.store';
 import { SuscriptorDTO } from '../services/suscriptores.service';
 import SuscriptorModal from '../components/SuscriptorModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
 
 const store = useSuscriptoresStore();
+const toast = useToastStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<SuscriptorDTO | null>(null);
@@ -128,8 +125,6 @@ const isSaving = ref(false);
 const isDeleteModalOpen = ref(false);
 const itemToDelete = ref<SuscriptorDTO | null>(null);
 const isDeleting = ref(false);
-
-const successMessage = ref('');
 
 onMounted(() => {
   store.fetchSuscriptores();
@@ -157,14 +152,16 @@ const handleSave = async (payload: Partial<SuscriptorDTO>) => {
   try {
     if (selectedItem.value?.id) {
       await store.updateSuscriptor(selectedItem.value.id, payload);
-      showSuccess('Suscriptor actualizado exitosamente.');
+      toast.success('Suscriptor modificado con éxito');
     } else {
       await store.createSuscriptor(payload);
-      showSuccess('Suscriptor registrado exitosamente.');
+      toast.success('Suscriptor creado con éxito');
     }
     isModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al guardar suscriptor:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo guardar el suscriptor';
+    toast.error(msg, 'Error al guardar suscriptor');
   } finally {
     isSaving.value = false;
   }
@@ -180,20 +177,15 @@ const handleDelete = async () => {
   isDeleting.value = true;
   try {
     await store.deleteSuscriptor(itemToDelete.value.id);
-    showSuccess('Suscriptor eliminado correctamente.');
+    toast.success('Suscriptor eliminado con éxito');
     isDeleteModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al eliminar:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo eliminar el suscriptor';
+    toast.error(msg, 'Error al eliminar');
   } finally {
     isDeleting.value = false;
   }
-};
-
-const showSuccess = (msg: string) => {
-  successMessage.value = msg;
-  setTimeout(() => {
-    successMessage.value = '';
-  }, 4000);
 };
 </script>
 

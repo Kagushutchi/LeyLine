@@ -10,11 +10,6 @@
       </button>
     </div>
 
-    <!-- Feedback -->
-    <div v-if="successMessage" class="alert alert-success">
-      {{ successMessage }}
-    </div>
-
     <!-- Estado de Carga -->
     <div v-if="store.loading && store.cajas.length === 0" class="state-box">
       <h3 class="state-title">Cargando catálogo</h3>
@@ -110,11 +105,13 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { useCajasMensualesStore } from '../store/cajas-mensuales.store';
+import { useToastStore } from '@/common/store/toast.store';
 import { CajaMensualDTO } from '../services/cajas-mensuales.service';
 import CajaMensualModal from '../components/CajaMensualModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
 
 const store = useCajasMensualesStore();
+const toast = useToastStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<CajaMensualDTO | null>(null);
@@ -123,8 +120,6 @@ const isSaving = ref(false);
 const isDeleteModalOpen = ref(false);
 const itemToDelete = ref<CajaMensualDTO | null>(null);
 const isDeleting = ref(false);
-
-const successMessage = ref('');
 
 const meses = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -161,14 +156,16 @@ const handleSave = async (payload: Partial<CajaMensualDTO>) => {
   try {
     if (selectedItem.value?.id) {
       await store.updateCaja(selectedItem.value.id, payload);
-      showSuccess('Caja mensual actualizada exitosamente.');
+      toast.success('Caja mensual modificada con éxito');
     } else {
       await store.createCaja(payload);
-      showSuccess('Caja mensual registrada exitosamente.');
+      toast.success('Caja mensual creada con éxito');
     }
     isModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al guardar caja mensual:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo guardar la caja mensual';
+    toast.error(msg, 'Error al guardar caja mensual');
   } finally {
     isSaving.value = false;
   }
@@ -184,20 +181,15 @@ const handleDelete = async () => {
   isDeleting.value = true;
   try {
     await store.deleteCaja(itemToDelete.value.id);
-    showSuccess('Caja mensual eliminada correctamente.');
+    toast.success('Caja mensual eliminada con éxito');
     isDeleteModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al eliminar caja:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo eliminar la caja';
+    toast.error(msg, 'Error al eliminar');
   } finally {
     isDeleting.value = false;
   }
-};
-
-const showSuccess = (msg: string) => {
-  successMessage.value = msg;
-  setTimeout(() => {
-    successMessage.value = '';
-  }, 4000);
 };
 </script>
 

@@ -10,11 +10,6 @@
       </button>
     </div>
 
-    <!-- Feedback -->
-    <div v-if="successMessage" class="alert alert-success">
-      {{ successMessage }}
-    </div>
-
     <!-- Estado de Carga -->
     <div v-if="store.loading && store.suscripciones.length === 0" class="state-box">
       <h3 class="state-title">Cargando membresías</h3>
@@ -134,6 +129,7 @@ import { ref, onMounted } from 'vue';
 import { useSuscripcionesStore } from '../store/suscripciones.store';
 import { useSuscriptoresStore } from '../../suscriptores/store/suscriptores.store';
 import { useCajasMensualesStore } from '../../cajas-mensuales/store/cajas-mensuales.store';
+import { useToastStore } from '@/common/store/toast.store';
 import { SuscripcionDTO } from '../services/suscripciones.service';
 import SuscripcionModal from '../components/SuscripcionModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
@@ -141,6 +137,7 @@ import ConfirmModal from '@/common/components/ConfirmModal.vue';
 const store = useSuscripcionesStore();
 const suscriptoresStore = useSuscriptoresStore();
 const cajasStore = useCajasMensualesStore();
+const toast = useToastStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<SuscripcionDTO | null>(null);
@@ -149,8 +146,6 @@ const isSaving = ref(false);
 const isDeleteModalOpen = ref(false);
 const itemToDelete = ref<SuscripcionDTO | null>(null);
 const isDeleting = ref(false);
-
-const successMessage = ref('');
 
 const loadData = async () => {
   await Promise.all([
@@ -225,14 +220,16 @@ const handleSave = async (payload: Partial<SuscripcionDTO>) => {
   try {
     if (selectedItem.value?.id) {
       await store.updateSuscripcion(selectedItem.value.id, payload);
-      showSuccess('Suscripción modificada exitosamente.');
+      toast.success('Suscripción modificada con éxito');
     } else {
       await store.createSuscripcion(payload);
-      showSuccess('Suscripción creada exitosamente.');
+      toast.success('Suscripción creada con éxito');
     }
     isModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al guardar suscripción:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo guardar la suscripción';
+    toast.error(msg, 'Error al guardar suscripción');
   } finally {
     isSaving.value = false;
   }
@@ -241,18 +238,22 @@ const handleSave = async (payload: Partial<SuscripcionDTO>) => {
 const handlePause = async (id: string) => {
   try {
     await store.pauseSuscripcion(id);
-    showSuccess('Suscripción pausada.');
-  } catch (error) {
-    console.error('Error al pausar:', error);
+    toast.success('Suscripción pausada con éxito');
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo pausar';
+    toast.error(msg, 'Error al pausar');
   }
 };
 
 const handleCancel = async (id: string) => {
   try {
     await store.cancelSuscripcion(id);
-    showSuccess('Suscripción cancelada.');
-  } catch (error) {
-    console.error('Error al cancelar:', error);
+    toast.success('Suscripción cancelada con éxito');
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo cancelar';
+    toast.error(msg, 'Error al cancelar');
   }
 };
 
@@ -266,20 +267,15 @@ const handleDelete = async () => {
   isDeleting.value = true;
   try {
     await store.deleteSuscripcion(itemToDelete.value.id);
-    showSuccess('Suscripción eliminada.');
+    toast.success('Suscripción eliminada con éxito');
     isDeleteModalOpen.value = false;
-  } catch (error) {
-    console.error('Error al eliminar:', error);
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo eliminar la suscripción';
+    toast.error(msg, 'Error al eliminar');
   } finally {
     isDeleting.value = false;
   }
-};
-
-const showSuccess = (msg: string) => {
-  successMessage.value = msg;
-  setTimeout(() => {
-    successMessage.value = '';
-  }, 4000);
 };
 </script>
 

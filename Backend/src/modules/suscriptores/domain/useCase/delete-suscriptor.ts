@@ -11,19 +11,16 @@ export default class DeleteSuscriptor
     {
         this.repository = new SuscriptorRepository();
     }
+
     async execute(id: string | number): Promise<any>
     {
-        let result: Suscriptor;
-
-        try
-        {
-            result = await this.repository.delete(id);
-        }
-        catch
+        const current = await this.repository.findOneById(id);
+        if (!current)
         {
             throw new AppError('Cliente no encontrado', 404);
         }
 
+        const result = await this.repository.delete(id);
         return { success: result, id };
     }
 }
