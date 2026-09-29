@@ -1,0 +1,74 @@
+Project LeyLine {
+  database_type: 'PostgreSQL'
+  Note: 'Modelo entidad-relación de suscriptores, suscripciones, cajas mensuales y productos.'
+}
+
+Table suscriptores {
+  id uuid [pk]
+  nombre varchar
+  apellido varchar [note: 'Nullable']
+  email varchar [unique]
+  telefono varchar [note: 'Nullable']
+  documento varchar [note: 'Nullable']
+  direccion json [note: 'simple-json en TypeORM; nullable']
+  preferenciasOrganolepticas json [note: 'simple-json en TypeORM; nullable']
+  activo boolean
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table suscripciones {
+  id uuid [pk]
+  suscriptorId uuid
+  cajaMensualId uuid
+  categoria varchar
+  estado varchar
+  montoMensual decimal
+  fechaInicio timestamp
+  proximoCobro timestamp
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table cajas_mensuales {
+  id uuid [pk]
+  nombre varchar
+  categoria varchar
+  mes int
+  anio int
+  descripcion varchar [note: 'Nullable']
+  precioBase decimal
+  disponible boolean
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table productos {
+  id uuid [pk]
+  nombre varchar
+  descripcion varchar [note: 'Nullable']
+  categoria varchar
+  tipo varchar
+  productor varchar
+  perfilNotas json [note: 'simple-json en TypeORM; nullable']
+  alergenosRestricciones json [note: 'simple-json en TypeORM; nullable']
+  sku varchar [unique, note: 'Nullable']
+  precioReferencia decimal [note: 'Nullable']
+  activo boolean
+  createdAt timestamp
+  updatedAt timestamp
+}
+
+Table cajas_mensuales_productos {
+  id uuid [pk]
+  cajaMensualId uuid
+  productoId uuid
+  cantidad int
+  orden int [note: 'Nullable']
+  precioAplicado decimal [note: 'Nullable']
+}
+
+Ref: suscripciones.suscriptorId > suscriptores.id [delete: cascade]
+Ref: suscripciones.cajaMensualId > cajas_mensuales.id [delete: restrict]
+Ref: cajas_mensuales_productos.cajaMensualId > cajas_mensuales.id [delete: cascade]
+Ref: cajas_mensuales_productos.productoId > productos.id [delete: restrict]
