@@ -129,7 +129,7 @@ classDiagram
 
 ## Funcionalidades actuales
 
-Los controllers reciben las requests HTTP y delegan cada operación en un caso de uso del mismo módulo.
+Los controllers representan las operaciones HTTP disponibles y los repositories representan el acceso a persistencia. Los casos de uso existen entre ambas capas, pero se omiten de este gráfico para mantenerlo legible.
 
 ```mermaid
 classDiagram
@@ -172,29 +172,45 @@ classDiagram
         +delete(id)
     }
 
-    class SuscriptorUseCases {
-        <<domain/useCase>>
+    class BaseTypeORM {
+        +save(entity)
+        +findOneById(id)
+        +findAll()
+        +update(id, entity)
+        +delete(id)
     }
 
-    class SuscripcionUseCases {
-        <<domain/useCase>>
+    class SuscriptorRepository {
+        +update(id, item)
+    }
+    class SuscripcionRepository {
+        +findAll()
+        +findOneById(id)
+        +findBySuscriptorId(suscriptorId)
+        +update(id, entity)
+    }
+    class CajaMensualRepository {
+        +findAll()
+        +findOneById(id)
+        +findByMesAnio(mes, anio)
+    }
+    class ProductoRepository {
+        +findAll()
+        +findOneById(id)
     }
 
-    class CajaMensualUseCases {
-        <<domain/useCase>>
-    }
+    SuscriptoresController ..> SuscriptorRepository : vía casos de uso
+    SuscripcionesController ..> SuscripcionRepository : vía casos de uso
+    CajasMensualesController ..> CajaMensualRepository : vía casos de uso
+    ProductosController ..> ProductoRepository : vía casos de uso
 
-    class ProductoUseCases {
-        <<domain/useCase>>
-    }
-
-    SuscriptoresController ..> SuscriptorUseCases : delega
-    SuscripcionesController ..> SuscripcionUseCases : delega
-    CajasMensualesController ..> CajaMensualUseCases : delega
-    ProductosController ..> ProductoUseCases : delega
+    SuscriptorRepository --|> BaseTypeORM
+    SuscripcionRepository --|> BaseTypeORM
+    CajaMensualRepository --|> BaseTypeORM
+    ProductoRepository --|> BaseTypeORM
 ```
 
-Los nombres agrupados (`SuscripcionUseCases`, por ejemplo) representan los casos de uso existentes en `domain/useCase/`; no son una clase única implementada en el código.
+Los métodos de los controllers están tomados del código real. La relación punteada indica el flujo simplificado `Controller → casos de uso → Repository`; no implica que el controller instancie directamente el repository. Los métodos comunes de `BaseTypeORM` son heredados por los cuatro repositories.
 
 ## Ubicación en el backend
 
@@ -204,3 +220,4 @@ Los nombres agrupados (`SuscripcionUseCases`, por ejemplo) representan los casos
 | Controllers | `Backend/src/modules/*/presentation/controller.ts` |
 | Casos de uso | `Backend/src/modules/*/domain/useCase/` |
 | Repositories | `Backend/src/modules/*/infrastructure/*-repository.ts` |
+| Repository base | `Backend/src/common/classes/base-typeorm-repository.ts` |
