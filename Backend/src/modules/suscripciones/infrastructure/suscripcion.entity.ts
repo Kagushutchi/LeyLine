@@ -24,7 +24,7 @@ export class Suscripcion {
   @Column({ type: 'uuid' })
   cajaMensualId: string;
 
-  @ManyToOne(() => CajaMensual, { onDelete: 'RESTRICT' })
+  @ManyToOne(() => CajaMensual, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'cajaMensualId' })
   cajaMensual: CajaMensual;
 

@@ -4,7 +4,7 @@
       <div class="brand-eyebrow">Plataforma de Curaduría & Membresías</div>
       <h1 class="hero-title font-serif-title">Panel de Control ClubCurator</h1>
       <p class="hero-description">
-        Gestión integral para clubes de suscripción de vinos de autor, cafés de especialidad y cervezas artesanales.
+        Gestión integral para clubes de suscripción de vinos de autor, cafés de especialidad, cervezas artesanales,.
       </p>
     </div>
 
