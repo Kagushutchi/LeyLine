@@ -2,6 +2,8 @@
 
 Esta página documenta cómo está construido el backend actual y qué responsabilidad tiene cada pieza. Los diagramas reflejan el código real; cuando un patrón está preparado pero todavía no tiene una integración concreta, se indica explícitamente.
 
+Para el modelo de clases y las operaciones expuestas por cada módulo, ver el [diagrama de clases](diagrama-de-clases.md).
+
 ## 1. Composición general: monolito modular
 
 Se eligió un monolito modular porque todas las funcionalidades comparten proceso y persistencia, pero se mantienen separadas por dominio.
