@@ -140,6 +140,7 @@ const props = withDefaults(
     saving?: boolean;
   }>(),
   {
+    suscripcion: null,
     suscriptoresList: () => [],
     cajasList: () => [],
     saving: false,

@@ -59,6 +59,15 @@ Table productos {
   updatedAt timestamp
 }
 
+Table stock_productos {
+  id uuid [pk]
+  productoId uuid [unique]
+  productor varchar
+  cantidadDisponible int
+  cantidadReservada int
+  actualizadoEn timestamp
+}
+
 Table cajas_mensuales_productos {
   id uuid [pk]
   cajaMensualId uuid
@@ -72,3 +81,4 @@ Ref: suscripciones.suscriptorId > suscriptores.id [delete: cascade]
 Ref: suscripciones.cajaMensualId > cajas_mensuales.id [delete: restrict]
 Ref: cajas_mensuales_productos.cajaMensualId > cajas_mensuales.id [delete: cascade]
 Ref: cajas_mensuales_productos.productoId > productos.id [delete: restrict]
+Ref: stock_productos.productoId > productos.id [delete: cascade]

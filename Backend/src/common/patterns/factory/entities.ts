@@ -3,11 +3,13 @@ import { Suscripcion } from "../../../modules/suscripciones/infrastructure/suscr
 import { CajaMensual } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual.entity";
 import { CajaMensualProducto } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity";
 import { Producto } from "../../../modules/productos/infrastructure/producto.entity";
+import { StockProducto } from "../../../modules/inventario/infrastructure/stock-producto.entity";
 
 export const entities = [
     Suscriptor,
     Suscripcion,
     CajaMensual,
     CajaMensualProducto,
-    Producto
+    Producto,
+    StockProducto
 ];

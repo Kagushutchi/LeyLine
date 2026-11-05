@@ -8,6 +8,7 @@ import { CajaMensual } from '../modules/cajas-mensuales/infrastructure/caja-mens
 import { CajaMensualProducto } from '../modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity';
 import { Suscriptor } from '../modules/suscriptores/infrastructure/suscriptor.entity';
 import { Suscripcion } from '../modules/suscripciones/infrastructure/suscripcion.entity';
+import { StockProducto } from '../modules/inventario/infrastructure/stock-producto.entity';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -292,6 +293,25 @@ async function seed(): Promise<void> {
   }
   logger.info(`  ✔ ${productosGuardados.length} productos creados.`);
 
+  // ── 3.1 Stock por producto y productor ───────────────────────────────────
+  logger.info('Insertando stock de inventario...');
+  const stockRepo = ds.getRepository(StockProducto);
+  const stockGuardado: StockProducto[] = [];
+
+  for (const [index, producto] of productosGuardados.entries()) {
+    stockGuardado.push(
+      await stockRepo.save(
+        stockRepo.create({
+          productoId: producto.id,
+          productor: producto.productor,
+          cantidadDisponible: 40 + index * 5,
+          cantidadReservada: 0,
+        })
+      )
+    );
+  }
+  logger.info(`  ✔ ${stockGuardado.length} registros de stock creados.`);
+
   // Helpers de búsqueda por SKU para armar las composiciones
   const bySkuMap = new Map(productosGuardados.map((p) => [p.sku!, p]));
   const bySku = (sku: string): Producto => {
@@ -496,6 +516,7 @@ async function seed(): Promise<void> {
   logger.info('');
   logger.info('=== Seed completado exitosamente ===');
   logger.info(`  Productos:     ${productosGuardados.length}`);
+  logger.info(`  Stock:         ${stockGuardado.length}`);
   logger.info(`  Cajas:         ${cajasGuardadas.length}`);
   logger.info(`  Suscriptores:  ${suscriptoresGuardados.length}`);
   logger.info(`  Suscripciones: ${suscripcionesGuardadas.length}`);
