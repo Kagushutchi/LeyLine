@@ -1,5 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
 import SuscripcionesController from "./controller";
+import { validateBody, validateParams } from "../../../common/middlewares/validation.middleware";
+import {
+  createSuscripcionSchema,
+  updateSuscripcionSchema,
+  suscripcionIdParamSchema,
+  suscriptorIdParamSchema,
+} from "./suscripcion.schema";
 
 class SuscripcionesRouter {
   private router: Router;
@@ -27,7 +34,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}cliente/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}cliente/:suscriptorId`, validateParams(suscriptorIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { suscriptorId } = req.params;
         const result = await this.controller.getSuscripcionesBySuscriptor(suscriptorId);
@@ -37,7 +44,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, validateParams(suscriptorIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const result = await this.controller.getSuscripcionesBySuscriptor(req.params.suscriptorId);
         res.status(200).json({ status: 'success', data: result });
@@ -46,7 +53,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.getSuscripcionById(id);
@@ -56,7 +63,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.post(this.BASE_URL, async (req: Request, res: Response, next: NextFunction) => {
+    router.post(this.BASE_URL, validateBody(createSuscripcionSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const result = await this.controller.createSuscripcion(req.body);
         res.status(201).json({ status: 'success', data: result });
@@ -65,7 +72,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id/pausar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.pauseSuscripcion(id);
@@ -75,7 +82,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.patch(`${this.BASE_URL}:id/pausar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.patch(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.pauseSuscripcion(id);
@@ -85,7 +92,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id/cancelar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.cancelSuscripcion(id);
@@ -95,7 +102,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.patch(`${this.BASE_URL}:id/cancelar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.patch(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.cancelSuscripcion(id);
@@ -105,7 +112,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), validateBody(updateSuscripcionSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.updateSuscripcion(id, req.body);
@@ -115,7 +122,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.delete(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.delete(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.deleteSuscripcion(id);

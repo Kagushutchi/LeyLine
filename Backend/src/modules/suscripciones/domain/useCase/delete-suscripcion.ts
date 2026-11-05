@@ -1,4 +1,3 @@
-import { Suscripcion } from "../../infrastructure/suscripcion.entity";
 import { SuscripcionRepository } from "../../infrastructure/suscripcion-repository";
 import { AppError } from "../../../../common/errors/app-error";
 

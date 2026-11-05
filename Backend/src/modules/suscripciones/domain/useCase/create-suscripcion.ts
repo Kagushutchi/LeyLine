@@ -1,7 +1,7 @@
 import { Suscripcion } from "../../infrastructure/suscripcion.entity";
 import { SuscripcionRepository } from "../../infrastructure/suscripcion-repository";
 import { AppError } from "../../../../common/errors/app-error";
-import { dataSource } from "../../../../app";
+import { getDataSource } from "../../../../config/database.config";
 import { Suscriptor } from "../../../suscriptores/infrastructure/suscriptor.entity";
 import { CajaMensual } from "../../../cajas-mensuales/infrastructure/caja-mensual.entity";
 
@@ -21,10 +21,10 @@ export default class CreateSuscripcion {
       throw new AppError('El monto mensual debe ser mayor a 0', 400);
     }
 
-    const suscriptor = await dataSource.getRepository(Suscriptor).findOneBy({ id: payload.suscriptorId });
+    const suscriptor = await getDataSource().getRepository(Suscriptor).findOneBy({ id: payload.suscriptorId });
     if (!suscriptor) throw new AppError(`Suscriptor con ID ${payload.suscriptorId} no encontrado`, 404);
 
-    const cajaMensual = await dataSource.getRepository(CajaMensual).findOne({
+    const cajaMensual = await getDataSource().getRepository(CajaMensual).findOne({
       where: { id: payload.cajaMensualId },
       relations: { composiciones: { producto: true } },
     });

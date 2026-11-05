@@ -1,4 +1,3 @@
-import { CajaMensual } from "../../infrastructure/caja-mensual.entity";
 import { CajaMensualRepository } from "../../infrastructure/caja-mensual-repository";
 import { AppError } from "../../../../common/errors/app-error";
 

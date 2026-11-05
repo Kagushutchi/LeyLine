@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import DBEngineFactory from '../common/patterns/factory/db-engine-factory';
+import { AppDataSource } from '../config/database.config';
 import { logger } from '../common/utils/logger';
 
 import { Producto } from '../modules/productos/infrastructure/producto.entity';
@@ -263,9 +263,11 @@ const suscriptoresData: Partial<Suscriptor>[] = [
 async function seed(): Promise<void> {
   logger.info('=== ClubCurator — Iniciando carga de datos de prueba ===');
 
-  // 1. Conectar usando el mismo factory que utiliza app.ts
-  const database = DBEngineFactory.createDBEngine();
-  const ds: DataSource = await database.connectDB();
+  // 1. Conectar usando la misma instancia que utiliza el servidor
+  if (!AppDataSource.isInitialized) {
+    await AppDataSource.initialize();
+  }
+  const ds: DataSource = AppDataSource;
   logger.info(`Conexión establecida (${ds.options.type})`);
 
   // 2. Verificar si ya existen datos para evitar duplicados
@@ -275,7 +277,7 @@ async function seed(): Promise<void> {
       `Ya existen ${productosExistentes} producto(s) en la base de datos. ` +
         'Abortando seed para evitar duplicados. Limpia la BD antes de volver a sembrar.',
     );
-    await database.disconnectDB();
+    await AppDataSource.destroy();
     return;
   }
 
@@ -498,7 +500,7 @@ async function seed(): Promise<void> {
   logger.info(`  Suscriptores:  ${suscriptoresGuardados.length}`);
   logger.info(`  Suscripciones: ${suscripcionesGuardadas.length}`);
 
-  await database.disconnectDB();
+  await AppDataSource.destroy();
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────

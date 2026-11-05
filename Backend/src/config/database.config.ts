@@ -41,3 +41,18 @@ export class DatabaseFactory {
 }
 
 export const AppDataSource = DatabaseFactory.createDataSource();
+
+/**
+ * Punto único de acceso a la conexión activa.
+ * Evita que los repositorios dependan del módulo de la aplicación (app.ts)
+ * y garantiza que la conexión ya fue inicializada antes de usarse.
+ */
+export const getDataSource = (): DataSource => {
+  if (!AppDataSource.isInitialized) {
+    throw new Error(
+      'La conexión a la base de datos no está inicializada. ' +
+        'Invocá AppDataSource.initialize() antes de usar los repositorios.'
+    );
+  }
+  return AppDataSource;
+};

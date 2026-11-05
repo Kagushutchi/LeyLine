@@ -1,28 +1,18 @@
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import { envConfig } from './config/env.config';
+import { AppDataSource } from './config/database.config';
 import { loggerMiddleware } from './common/middlewares/logger.middleware';
 import { errorHandlerMiddleware } from './common/middlewares/error.middleware';
-import { DataSource } from 'typeorm';
 
-import  DBEngineFactory  from './common/patterns/factory/db-engine-factory';
 // Routers de presentación (Arquitectura DDD)
 import suscriptoresRouter from './modules/suscriptores/presentation/suscriptores-router';
 import suscripcionesRouter from './modules/suscripciones/presentation/suscripciones-router';
 import cajasMensualesRouter from './modules/cajas-mensuales/presentation/cajas-mensuales-router';
 import productosRouter from './modules/productos/presentation/productos-router';
 
-export let dataSource: DataSource;
-
 export const createApp = async (): Promise<Application> => {
   const app: Application = express();
-  const database = DBEngineFactory.createDBEngine();
-  dataSource = await database.connectDB();
-  dataSource.synchronize();
-
-  if (!dataSource.isInitialized) {
-    await dataSource.initialize();
-  }
 
   // Middlewares globales
   app.use(cors({ origin: envConfig.corsOrigin }));
@@ -35,6 +25,7 @@ export const createApp = async (): Promise<Application> => {
       status: 'ok',
       service: 'ClubCurator API',
       database: envConfig.db.type,
+      databaseConnected: AppDataSource.isInitialized,
       timestamp: new Date().toISOString(),
     });
   });

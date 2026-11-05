@@ -1,5 +1,13 @@
 import { Router, Request, Response, NextFunction } from "express";
 import CajasMensualesController from "./controller";
+import { validateBody, validateParams } from "../../../common/middlewares/validation.middleware";
+import {
+  createCajaMensualSchema,
+  updateCajaMensualSchema,
+  recommendCajaMensualSchema,
+  cajaMensualIdParamSchema,
+  periodoParamSchema,
+} from "./caja-mensual.schema";
 
 class CajasMensualesRouter {
   private router: Router;
@@ -27,7 +35,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}periodo/:anio/:mes`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}periodo/:anio/:mes`, validateParams(periodoParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const anio = parseInt(req.params.anio, 10);
         const mes = parseInt(req.params.mes, 10);
@@ -38,7 +46,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.getCajaMensualById(id);
@@ -48,7 +56,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.post(this.BASE_URL, async (req: Request, res: Response, next: NextFunction) => {
+    router.post(this.BASE_URL, validateBody(createCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const result = await this.controller.createCajaMensual(req.body);
         res.status(201).json({ status: 'success', data: result });
@@ -57,7 +65,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.post(`${this.BASE_URL}recomendar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.post(`${this.BASE_URL}recomendar`, validateBody(recommendCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { suscriptorId, preferencias } = req.body;
         const result = await this.controller.recommendCajaMensual(suscriptorId, preferencias);
@@ -67,7 +75,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), validateBody(updateCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.updateCajaMensual(id, req.body);
@@ -77,7 +85,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.delete(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.delete(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.deleteCajaMensual(id);
