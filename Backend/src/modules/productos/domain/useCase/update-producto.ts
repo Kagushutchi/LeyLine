@@ -11,7 +11,8 @@ export default class UpdateProducto {
     if (payload.precioReferencia !== undefined && payload.precioReferencia < 0) {
       throw new AppError('El precio de referencia no puede ser negativo', 400);
     }
-    Object.assign(producto, payload);
+    const { id: _id, deletedAt: _deletedAt, composiciones: _composiciones, ...changes } = payload;
+    Object.assign(producto, changes);
     return this.repository.save(producto);
   }
 }

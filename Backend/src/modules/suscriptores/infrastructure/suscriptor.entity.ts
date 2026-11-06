@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, DeleteDateColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 export interface DireccionSuscriptor {
   calle?: string;
@@ -62,4 +62,6 @@ export class Suscriptor {
 
   @UpdateDateColumn()
   updatedAt: Date;
+  @DeleteDateColumn({ nullable: true })
+  deletedAt: Date | null;
 }

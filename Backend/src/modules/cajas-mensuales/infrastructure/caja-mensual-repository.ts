@@ -1,30 +1,31 @@
+import { DataSource } from 'typeorm';
 import { dataSource } from '../../../app';
 import BaseTypeORM from '../../../common/classes/base-typeorm-repository';
 import { CajaMensual } from './caja-mensual.entity';
 
 export class CajaMensualRepository extends BaseTypeORM<CajaMensual> {
-  constructor() {
-    super(dataSource.getRepository(CajaMensual));
+  constructor(private readonly db: DataSource = dataSource) {
+    super(db.getRepository(CajaMensual));
+  }
+
+  private activeWithHistory() {
+    // Las composiciones vigentes conservan el producto aunque este haya sido dado de baja.
+    return this.db.getRepository(CajaMensual).createQueryBuilder('caja')
+      .withDeleted()
+      .leftJoinAndSelect('caja.composiciones', 'composicion', 'composicion.deletedAt IS NULL')
+      .leftJoinAndSelect('composicion.producto', 'producto')
+      .where('caja.deletedAt IS NULL');
   }
 
   public async findByMesAnio(mes: number, anio: number): Promise<CajaMensual[]> {
-    return await dataSource.getRepository(CajaMensual).find({
-      where: { mes, anio },
-      relations: { composiciones: { producto: true } },
-    });
+    return this.activeWithHistory().andWhere('caja.mes = :mes AND caja.anio = :anio', { mes, anio }).getMany();
   }
 
   public async findAll(): Promise<CajaMensual[]> {
-    return await dataSource.getRepository(CajaMensual).find({
-      relations: { composiciones: { producto: true } },
-      order: { anio: 'DESC', mes: 'DESC' },
-    });
+    return this.activeWithHistory().orderBy('caja.anio', 'DESC').addOrderBy('caja.mes', 'DESC').getMany();
   }
 
   public async findOneById(id: string | number): Promise<CajaMensual | null> {
-    return await dataSource.getRepository(CajaMensual).findOne({
-      where: { id: String(id) },
-      relations: { composiciones: { producto: true } },
-    });
+    return this.activeWithHistory().andWhere('caja.id = :id', { id: String(id) }).getOne();
   }
 }

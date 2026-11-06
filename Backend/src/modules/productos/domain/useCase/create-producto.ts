@@ -15,7 +15,8 @@ export default class CreateProducto {
     }
 
     const producto = new Producto();
-    Object.assign(producto, payload);
+    const { id: _id, deletedAt: _deletedAt, composiciones: _composiciones, ...changes } = payload;
+    Object.assign(producto, changes);
     producto.activo = payload.activo ?? true;
     return this.repository.save(producto);
   }

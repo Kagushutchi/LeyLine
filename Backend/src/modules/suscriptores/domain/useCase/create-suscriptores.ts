@@ -29,8 +29,9 @@ export default class CreateSuscriptor
             throw new AppError('El email no tiene un formato válido', 400);
         }
         
+        const { id: _id, deletedAt: _deletedAt, ...changes } = payload;
         return await this.repository.save({
-            ...payload,
+            ...changes,
             nombre: payload.nombre.trim(),
             email: payload.email.trim().toLowerCase(),
         } as Suscriptor);

@@ -1,4 +1,4 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
 import { Producto } from '../../productos/infrastructure/producto.entity';
 import { CajaMensual } from './caja-mensual.entity';
 
@@ -22,11 +22,13 @@ export class CajaMensualProducto {
   @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
   precioAplicado?: number;
 
-  @ManyToOne(() => CajaMensual, (caja) => caja.composiciones, { onDelete: 'CASCADE' })
+  @ManyToOne(() => CajaMensual, (caja) => caja.composiciones, { onDelete: 'CASCADE', orphanedRowAction: 'soft-delete' })
   @JoinColumn({ name: 'cajaMensualId' })
   cajaMensual: CajaMensual;
 
   @ManyToOne(() => Producto, (producto) => producto.composiciones, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'productoId' })
   producto: Producto;
+  @DeleteDateColumn({ nullable: true })
+  deletedAt: Date | null;
 }

@@ -1,23 +1,26 @@
+import { DataSource } from 'typeorm';
 import { dataSource } from '../../../app';
 import BaseTypeORM from '../../../common/classes/base-typeorm-repository';
 import { Producto } from './producto.entity';
 
 export class ProductoRepository extends BaseTypeORM<Producto> {
-  constructor() {
-    super(dataSource.getRepository(Producto));
+  constructor(private readonly db: DataSource = dataSource) {
+    super(db.getRepository(Producto));
+  }
+
+  private activeWithHistory() {
+    return this.db.getRepository(Producto).createQueryBuilder('producto')
+      .withDeleted()
+      .leftJoinAndSelect('producto.composiciones', 'composicion', 'composicion.deletedAt IS NULL')
+      .leftJoinAndSelect('composicion.cajaMensual', 'caja')
+      .where('producto.deletedAt IS NULL');
   }
 
   async findAll(): Promise<Producto[]> {
-    return dataSource.getRepository(Producto).find({
-      relations: { composiciones: { cajaMensual: true } },
-      order: { nombre: 'ASC' },
-    });
+    return this.activeWithHistory().orderBy('producto.nombre', 'ASC').getMany();
   }
 
   async findOneById(id: string | number): Promise<Producto | null> {
-    return dataSource.getRepository(Producto).findOne({
-      where: { id: String(id) },
-      relations: { composiciones: { cajaMensual: true } },
-    });
+    return this.activeWithHistory().andWhere('producto.id = :id', { id: String(id) }).getOne();
   }
 }

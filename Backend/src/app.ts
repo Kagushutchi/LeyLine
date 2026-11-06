@@ -18,7 +18,6 @@ export const createApp = async (): Promise<Application> => {
   const app: Application = express();
   const database = DBEngineFactory.createDBEngine();
   dataSource = await database.connectDB();
-  dataSource.synchronize();
 
   if (!dataSource.isInitialized) {
     await dataSource.initialize();

@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, DeleteDateColumn, Column, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { CajaMensualProducto } from './caja-mensual-producto.entity';
 
 /**
@@ -30,7 +30,6 @@ export class CajaMensual {
 
   @OneToMany(() => CajaMensualProducto, (composicion) => composicion.cajaMensual, {
     cascade: ['insert', 'update'],
-    orphanedRowAction: 'delete',
   })
   composiciones: CajaMensualProducto[];
 
@@ -42,4 +41,6 @@ export class CajaMensual {
 
   @UpdateDateColumn()
   updatedAt: Date;
+  @DeleteDateColumn({ nullable: true })
+  deletedAt: Date | null;
 }

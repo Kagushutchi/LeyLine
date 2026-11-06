@@ -24,7 +24,7 @@ export default class UpdateCajaMensual {
       throw new AppError(`Caja mensual con ID ${id} no encontrada`, 404);
     }
 
-    const { composiciones, ...cajaPayload } = payload;
+    const { id: _id, composiciones, deletedAt: _deletedAt, ...cajaPayload } = payload;
     Object.assign(existing, cajaPayload);
     if (composiciones !== undefined) {
       existing.composiciones = await this.buildComposiciones(composiciones, existing);

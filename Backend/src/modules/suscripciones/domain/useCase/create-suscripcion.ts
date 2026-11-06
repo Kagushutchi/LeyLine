@@ -3,7 +3,7 @@ import { SuscripcionRepository } from "../../infrastructure/suscripcion-reposito
 import { AppError } from "../../../../common/errors/app-error";
 import { dataSource } from "../../../../app";
 import { Suscriptor } from "../../../suscriptores/infrastructure/suscriptor.entity";
-import { CajaMensual } from "../../../cajas-mensuales/infrastructure/caja-mensual.entity";
+import { CajaMensualRepository } from "../../../cajas-mensuales/infrastructure/caja-mensual-repository";
 
 export default class CreateSuscripcion {
   private repository: SuscripcionRepository;
@@ -24,10 +24,7 @@ export default class CreateSuscripcion {
     const suscriptor = await dataSource.getRepository(Suscriptor).findOneBy({ id: payload.suscriptorId });
     if (!suscriptor) throw new AppError(`Suscriptor con ID ${payload.suscriptorId} no encontrado`, 404);
 
-    const cajaMensual = await dataSource.getRepository(CajaMensual).findOne({
-      where: { id: payload.cajaMensualId },
-      relations: { composiciones: { producto: true } },
-    });
+    const cajaMensual = await new CajaMensualRepository().findOneById(payload.cajaMensualId);
     if (!cajaMensual) throw new AppError(`Caja mensual con ID ${payload.cajaMensualId} no encontrada`, 404);
     if (!cajaMensual.disponible) throw new AppError('La caja mensual seleccionada no está disponible', 400);
 

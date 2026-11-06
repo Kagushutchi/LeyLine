@@ -1,4 +1,4 @@
-import { FindOptionsWhere, ObjectLiteral, Repository } from "typeorm";
+import { FindOptionsWhere, IsNull, ObjectLiteral, Repository } from "typeorm";
 import { IBaseRepository } from "../interfaces/base-repository.interface";
 
 abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T> {
@@ -9,7 +9,7 @@ abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T
     }
 
     async findOneById(id: string | number): Promise<T | null> {
-        return await this.repository.findOne({ where: { id } } as FindOptionsWhere<any>);
+        return await this.repository.findOne({ where: { id, deletedAt: IsNull() } } as FindOptionsWhere<any>);
     }
 
     async delete(id: string | number): Promise<T> {
@@ -19,7 +19,7 @@ abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T
             throw "El registro a eliminar no existe";
         }
 
-        await this.repository.remove(el);
+        await this.repository.softRemove(el);
         return el;
     }
 
@@ -28,12 +28,13 @@ abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T
         if (!el) {
             throw "El registro a actualizar no existe";
         }
-        Object.assign(el, entity);
+        const { id: _id, deletedAt: _deletedAt, ...changes } = entity;
+        Object.assign(el, changes);
         return await this.repository.save(el);
     }
 
     async findAll(): Promise<T[]> {
-        return await this.repository.find();
+        return await this.repository.find({ where: { deletedAt: IsNull() } as unknown as FindOptionsWhere<T> });
     }
 
 }

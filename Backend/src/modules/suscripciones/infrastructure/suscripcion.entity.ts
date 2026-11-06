@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, DeleteDateColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Suscriptor } from '../../suscriptores/infrastructure/suscriptor.entity';
 import { CajaMensual } from '../../cajas-mensuales/infrastructure/caja-mensual.entity';
 
@@ -52,4 +52,6 @@ export class Suscripcion {
 
   @UpdateDateColumn()
   updatedAt: Date;
+  @DeleteDateColumn({ nullable: true })
+  deletedAt: Date | null;
 }
