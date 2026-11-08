@@ -21,8 +21,12 @@ export class CajaMensualRepository extends BaseTypeORM<CajaMensual> {
     return this.activeWithHistory().andWhere('caja.mes = :mes AND caja.anio = :anio', { mes, anio }).getMany();
   }
 
-  public async findAll(): Promise<CajaMensual[]> {
-    return this.activeWithHistory().orderBy('caja.anio', 'DESC').addOrderBy('caja.mes', 'DESC').getMany();
+  public async findAll(tenantId?: string): Promise<CajaMensual[]> {
+    const qb = this.activeWithHistory();
+    if (tenantId) {
+      qb.andWhere('(caja.tenantId = :tenantId OR caja.tenantId IS NULL)', { tenantId });
+    }
+    return qb.orderBy('caja.anio', 'DESC').addOrderBy('caja.mes', 'DESC').getMany();
   }
 
   public async findOneById(id: string | number): Promise<CajaMensual | null> {

@@ -3,8 +3,12 @@ import { Suscripcion } from "../../../modules/suscripciones/infrastructure/suscr
 import { CajaMensual } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual.entity";
 import { CajaMensualProducto } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity";
 import { Producto } from "../../../modules/productos/infrastructure/producto.entity";
+import { Tenant } from "../../../modules/auth/infrastructure/tenant.entity";
+import { User } from "../../../modules/auth/infrastructure/user.entity";
 
 export const entities = [
+    Tenant,
+    User,
     Suscriptor,
     Suscripcion,
     CajaMensual,

@@ -1,4 +1,7 @@
 import { NextFunction, Request, Response, Router } from 'express';
+import { authMiddleware, optionalAuthMiddleware } from '../../../common/middlewares/auth.middleware';
+import { requireRole } from '../../../common/middlewares/roles.middleware';
+import { tenantScopeMiddleware } from '../../../common/middlewares/tenant.middleware';
 import ProductosController from './controller';
 
 class ProductosRouter {
@@ -6,11 +9,11 @@ class ProductosRouter {
   private readonly router = Router();
 
   constructor() {
-    this.router.get('/', this.handle(async () => this.controller.getAll()));
+    this.router.get('/', optionalAuthMiddleware, this.handle(async (req) => this.controller.getAll(req.tenantId)));
     this.router.get('/:id', this.handle(async (req) => this.controller.getById(req.params.id)));
-    this.router.post('/', this.handle(async (req) => this.controller.create(req.body), 201));
-    this.router.put('/:id', this.handle(async (req) => this.controller.update(req.params.id, req.body)));
-    this.router.delete('/:id', this.handle(async (req) => this.controller.delete(req.params.id)));
+    this.router.post('/', authMiddleware, requireRole(['admin']), tenantScopeMiddleware, this.handle(async (req) => this.controller.create(req.body, req.tenantId), 201));
+    this.router.put('/:id', authMiddleware, requireRole(['admin']), tenantScopeMiddleware, this.handle(async (req) => this.controller.update(req.params.id, req.body)));
+    this.router.delete('/:id', authMiddleware, requireRole(['admin']), tenantScopeMiddleware, this.handle(async (req) => this.controller.delete(req.params.id)));
   }
 
   private handle(action: (req: Request) => Promise<unknown>, status = 200) {

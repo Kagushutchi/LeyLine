@@ -36,6 +36,9 @@ export class CajaMensual {
   @Column({ type: 'boolean', default: true })
   disponible: boolean;
 
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

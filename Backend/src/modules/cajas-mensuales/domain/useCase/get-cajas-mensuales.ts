@@ -8,7 +8,7 @@ export default class GetCajasMensuales {
     this.repository = new CajaMensualRepository();
   }
 
-  async execute(): Promise<CajaMensual[]> {
-    return await this.repository.findAll();
+  async execute(tenantId?: string): Promise<CajaMensual[]> {
+    return await this.repository.findAll(tenantId);
   }
 }

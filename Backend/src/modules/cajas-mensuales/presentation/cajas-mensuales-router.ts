@@ -1,4 +1,7 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { authMiddleware, optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
+import { requireRole } from "../../../common/middlewares/roles.middleware";
+import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
 import CajasMensualesController from "./controller";
 
 class CajasMensualesRouter {
@@ -18,9 +21,9 @@ class CajasMensualesRouter {
   public createRouter(): Router {
     const router = Router();
 
-    router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
+    router.get(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const result = await this.controller.getCajasMensuales();
+        const result = await this.controller.getCajasMensuales(req.tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
@@ -48,14 +51,20 @@ class CajasMensualesRouter {
       }
     });
 
-    router.post(this.BASE_URL, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const result = await this.controller.createCajaMensual(req.body);
-        res.status(201).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.post(
+      this.BASE_URL,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const result = await this.controller.createCajaMensual(req.body, req.tenantId);
+          res.status(201).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
     router.post(`${this.BASE_URL}recomendar`, async (req: Request, res: Response, next: NextFunction) => {
       try {
@@ -67,25 +76,37 @@ class CajasMensualesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.updateCajaMensual(id, req.body);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.put(
+      `${this.BASE_URL}:id`,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { id } = req.params;
+          const result = await this.controller.updateCajaMensual(id, req.body);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
-    router.delete(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.deleteCajaMensual(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.delete(
+      `${this.BASE_URL}:id`,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { id } = req.params;
+          const result = await this.controller.deleteCajaMensual(id);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
     return router;
   }

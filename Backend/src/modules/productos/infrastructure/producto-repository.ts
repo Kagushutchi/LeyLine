@@ -16,8 +16,12 @@ export class ProductoRepository extends BaseTypeORM<Producto> {
       .where('producto.deletedAt IS NULL');
   }
 
-  async findAll(): Promise<Producto[]> {
-    return this.activeWithHistory().orderBy('producto.nombre', 'ASC').getMany();
+  async findAll(tenantId?: string): Promise<Producto[]> {
+    const qb = this.activeWithHistory();
+    if (tenantId) {
+      qb.andWhere('(producto.tenantId = :tenantId OR producto.tenantId IS NULL)', { tenantId });
+    }
+    return qb.orderBy('producto.nombre', 'ASC').getMany();
   }
 
   async findOneById(id: string | number): Promise<Producto | null> {

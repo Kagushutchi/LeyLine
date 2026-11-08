@@ -7,6 +7,7 @@ import { DataSource } from 'typeorm';
 
 import  DBEngineFactory  from './common/patterns/factory/db-engine-factory';
 // Routers de presentación (Arquitectura DDD)
+import authRouter from './modules/auth/presentation/auth-router';
 import suscriptoresRouter from './modules/suscriptores/presentation/suscriptores-router';
 import suscripcionesRouter from './modules/suscripciones/presentation/suscripciones-router';
 import cajasMensualesRouter from './modules/cajas-mensuales/presentation/cajas-mensuales-router';
@@ -39,6 +40,7 @@ export const createApp = async (): Promise<Application> => {
   });
 
   // Rutas de Módulos (DDD)
+  app.use('/api/auth', authRouter);
   app.use('/api/suscriptores', suscriptoresRouter);
   app.use('/api/suscripciones', suscripcionesRouter);
   app.use('/api/cajas-mensuales', cajasMensualesRouter);

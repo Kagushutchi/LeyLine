@@ -47,6 +47,9 @@ export class Suscripcion {
   @Column({ type: 'date', nullable: true })
   proximoCobro: Date;
 
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

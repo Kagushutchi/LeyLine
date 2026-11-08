@@ -3,6 +3,7 @@ import { IDBEngine } from "../../interfaces/db-engine.interface";
 import { envConfig } from "../../../config/env.config";
 import { entities } from "./entities";
 import { AddSoftDelete1794000000000 } from "../../../migrations/1794000000000-AddSoftDelete";
+import { AddAuthAndMultiTenancy1795000000000 } from "../../../migrations/1795000000000-AddAuthAndMultiTenancy";
 
 export default class SqliteTypeORM implements IDBEngine<DataSource>
 {
@@ -15,7 +16,7 @@ export default class SqliteTypeORM implements IDBEngine<DataSource>
             type: "sqlite",
             database: envConfig.db.sqlitePath || envConfig.db.database,
             entities: entities,
-            migrations: [AddSoftDelete1794000000000],
+            migrations: [AddSoftDelete1794000000000, AddAuthAndMultiTenancy1795000000000],
         });
     }
 

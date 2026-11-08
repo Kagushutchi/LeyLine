@@ -44,6 +44,9 @@ export class Producto {
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @OneToMany(() => CajaMensualProducto, (composicion) => composicion.producto)
   composiciones: CajaMensualProducto[];
 

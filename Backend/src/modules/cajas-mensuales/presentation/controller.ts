@@ -7,9 +7,9 @@ import UpdateCajaMensual from '../domain/useCase/update-caja-mensual';
 import DeleteCajaMensual from '../domain/useCase/delete-caja-mensual';
 
 export default class CajasMensualesController {
-  async getCajasMensuales(): Promise<any[]> {
+  async getCajasMensuales(tenantId?: string): Promise<any[]> {
     const useCase = new GetCajasMensuales();
-    return await useCase.execute();
+    return await useCase.execute(tenantId);
   }
 
   async getCajaMensualById(id: string | number): Promise<any> {
@@ -22,7 +22,8 @@ export default class CajasMensualesController {
     return await useCase.execute(mes, anio);
   }
 
-  async createCajaMensual(payload: any): Promise<any> {
+  async createCajaMensual(payload: any, tenantId?: string): Promise<any> {
+    if (tenantId) payload.tenantId = tenantId;
     const useCase = new CreateCajaMensual();
     return await useCase.execute(payload);
   }
