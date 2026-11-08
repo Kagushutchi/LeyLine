@@ -107,15 +107,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response: any = await apiClient.post('/auth/login', payload);
       setAuthData(response.data);
-      toast.show(
+      toast.success(
         `Bienvenido, ${displayName.value} (${isAdmin.value ? 'Admin de Bodega' : 'Subscriptor'})`,
-        'success'
+        'Acceso concedido'
       );
       return response.data;
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Error al iniciar sesión';
       error.value = msg;
-      toast.show(msg, 'error');
+      toast.error(msg);
       throw err;
     } finally {
       loading.value = false;
@@ -129,15 +129,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response: any = await apiClient.post('/auth/register-admin', payload);
       setAuthData(response.data);
-      toast.show(
+      toast.success(
         `Bodega '${payload.nombreNegocio}' registrada con éxito. ¡Bienvenido Administrador!`,
-        'success'
+        'Registro exitoso'
       );
       return response.data;
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Error al registrar bodega';
       error.value = msg;
-      toast.show(msg, 'error');
+      toast.error(msg);
       throw err;
     } finally {
       loading.value = false;
@@ -151,15 +151,15 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response: any = await apiClient.post('/auth/register-subscriptor', payload);
       setAuthData(response.data);
-      toast.show(
+      toast.success(
         `Membresía registrada con éxito. ¡Bienvenido, ${payload.nombre}!`,
-        'success'
+        'Registro exitoso'
       );
       return response.data;
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Error al registrar subscriptor';
       error.value = msg;
-      toast.show(msg, 'error');
+      toast.error(msg);
       throw err;
     } finally {
       loading.value = false;
@@ -201,7 +201,7 @@ export const useAuthStore = defineStore('auth', () => {
     } finally {
       clearAuthData();
       const toast = useToastStore();
-      toast.show('Sesión cerrada correctamente', 'info');
+      toast.info('Sesión cerrada correctamente', 'Hasta pronto');
     }
   };
 
