@@ -6,10 +6,15 @@ export class AddSoftDelete1794000000000 implements MigrationInterface {
   ];
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    const type = queryRunner.connection.options.type === 'postgres' ? 'timestamp' : 'datetime';
+    const isPostgres = queryRunner.connection.options.type === 'postgres';
+    const type = isPostgres ? 'timestamp' : 'datetime';
     for (const table of this.tables) {
       if (!(await queryRunner.hasColumn(table, 'deletedAt'))) {
-        await queryRunner.addColumn(table, new TableColumn({ name: 'deletedAt', type, isNullable: true }));
+        if (!isPostgres) {
+          await queryRunner.query(`ALTER TABLE "${table}" ADD COLUMN "deletedAt" ${type}`);
+        } else {
+          await queryRunner.addColumn(table, new TableColumn({ name: 'deletedAt', type, isNullable: true }));
+        }
       }
     }
   }

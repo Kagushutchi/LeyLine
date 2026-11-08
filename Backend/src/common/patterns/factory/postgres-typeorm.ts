@@ -2,6 +2,7 @@ import { DataSource } from "typeorm";
 import { IDBEngine } from "../../interfaces/db-engine.interface";
 import { envConfig } from "../../../config/env.config";
 import { entities } from "./entities";
+import { AddSoftDelete1794000000000 } from "../../../migrations/1794000000000-AddSoftDelete";
 
 export default class PostgresTypeORM implements IDBEngine<DataSource>
 {
@@ -12,7 +13,8 @@ export default class PostgresTypeORM implements IDBEngine<DataSource>
         this.dataSource = new DataSource({
             ...envConfig.db,
             type: "postgres",
-            entities: entities
+            entities: entities,
+            migrations: [AddSoftDelete1794000000000],
         });
     }
 
@@ -20,6 +22,7 @@ export default class PostgresTypeORM implements IDBEngine<DataSource>
     async connectDB(): Promise<DataSource>
     {
         await this.dataSource.initialize();
+        await this.dataSource.runMigrations();
         return this.dataSource;
     }
 
