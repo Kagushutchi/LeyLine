@@ -4,6 +4,8 @@ import { CajaMensual } from "../../../modules/cajas-mensuales/infrastructure/caj
 import { CajaMensualProducto } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity";
 import { Producto } from "../../../modules/productos/infrastructure/producto.entity";
 import { StockProducto } from "../../../modules/inventario/infrastructure/stock-producto.entity";
+import { Tenant } from "../../../modules/auth/infrastructure/tenant.entity";
+import { User } from "../../../modules/auth/infrastructure/user.entity";
 
 export const entities = [
     Suscriptor,
@@ -11,5 +13,7 @@ export const entities = [
     CajaMensual,
     CajaMensualProducto,
     Producto,
-    StockProducto
+    StockProducto,
+    Tenant,
+    User
 ];

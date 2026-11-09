@@ -24,4 +24,10 @@ export const envConfig = {
     inventarioUrl: process.env.SOAP_INVENTARIO_URL || `http://localhost:${port}/soap/inventario`,
     timeoutMs: parseInt(process.env.SOAP_TIMEOUT_MS || '5000', 10),
   },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'clubcurator-secret-access-token-key-2026',
+    refreshSecret: process.env.JWT_REFRESH_SECRET || 'clubcurator-secret-refresh-token-key-2026',
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+  },
 };
