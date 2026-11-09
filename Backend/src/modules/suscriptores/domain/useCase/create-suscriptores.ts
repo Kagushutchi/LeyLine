@@ -1,18 +1,17 @@
-import { IBaseRepository } from "../../../../common/interfaces/base-repository.interface";
 import { Suscriptor } from "../../infrastructure/suscriptor.entity";
 import { SuscriptorRepository } from "../../infrastructure/suscriptor-repository";
 import { AppError } from "../../../../common/errors/app-error";
 
 export default class CreateSuscriptor
 {
-    private repository: IBaseRepository<Suscriptor>;
+    private repository: SuscriptorRepository;
 
     constructor()
     {
         this.repository = new SuscriptorRepository();
     }
 
-    async execute(payload: Partial<Suscriptor>): Promise<Suscriptor>
+    async execute(payload: Partial<Suscriptor>, tenantId?: string): Promise<Suscriptor>
     {
         if (!payload.nombre?.trim())
         {
@@ -34,6 +33,7 @@ export default class CreateSuscriptor
             ...changes,
             nombre: payload.nombre.trim(),
             email: payload.email.trim().toLowerCase(),
+            tenantId: tenantId || payload.tenantId,
         } as Suscriptor);
     }
 }

@@ -57,6 +57,9 @@ export class Suscriptor {
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -1,19 +1,18 @@
-import { IBaseRepository } from "../../../../common/interfaces/base-repository.interface";
 import { Suscriptor } from "../../infrastructure/suscriptor.entity";
 import { SuscriptorRepository } from "../../infrastructure/suscriptor-repository";
 import { AppError } from "../../../../common/errors/app-error";
 
 export default class UpdateSuscriptor
 {
-    private repository: IBaseRepository<Suscriptor>;
+    private repository: SuscriptorRepository;
     constructor()
     {
         this.repository = new SuscriptorRepository();
     }
 
-    async execute(id: string | number, payload: Partial<Suscriptor>): Promise<Suscriptor>
+    async execute(id: string | number, payload: Partial<Suscriptor>, tenantId?: string): Promise<Suscriptor>
     {
-        const current = await this.repository.findOneById(id);
+        const current = await this.repository.findOneById(id, tenantId);
 
         if (!current)
         {
