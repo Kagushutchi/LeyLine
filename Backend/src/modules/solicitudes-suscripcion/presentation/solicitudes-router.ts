@@ -13,6 +13,7 @@ const publicRequest = (request: SolicitudSuscripcion) => ({
   createdAt: request.createdAt, updatedAt: request.updatedAt,
 });
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_WAIT_MS = 5000, WAIT_STEP_MS = 75, MAX_WAITERS = 200;
 let waiters = 0;
 const isTerminalState = (state: string) => ['completado', 'rechazado', 'fallido'].includes(state);
@@ -39,7 +40,7 @@ export function createSolicitudesRouter(db: DataSource): Router {
       const body = req.body;
       if (!body || typeof body !== 'object' || Array.isArray(body)
         || Object.keys(body).some((field) => field !== 'cajaMensualId' && field !== 'precioConfirmadoCentavos')
-        || typeof body.cajaMensualId !== 'string' || !key
+        || typeof body.cajaMensualId !== 'string' || !UUID.test(body.cajaMensualId) || !key
         || !Number.isSafeInteger(body.precioConfirmadoCentavos) || body.precioConfirmadoCentavos <= 0) {
         throw new AppError('Datos de solicitud inválidos', 400);
       }
@@ -79,6 +80,7 @@ export function createSolicitudesRouter(db: DataSource): Router {
     try {
       const principal = await identity(req);
       const repository = db.getRepository(SolicitudSuscripcion);
+      if (!UUID.test(req.params.id)) throw new AppError('Solicitud no encontrada', 404);
       let request = await repository.findOneBy({ id: req.params.id, ...principal });
       if (!request) throw new AppError('Solicitud no encontrada', 404);
       // Long-poll: ?waitMs=N holds the response until the request is terminal (or N ms pass),
