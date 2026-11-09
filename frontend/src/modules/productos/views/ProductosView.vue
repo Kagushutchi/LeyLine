@@ -5,7 +5,7 @@
         <h1 class="view-title">Productos (Inventario & Bodega)</h1>
         <p class="view-subtitle">Catálogo de botellas, microlotes de café y variedades para composición de cajas.</p>
       </div>
-      <button class="btn btn-primary" @click="openCreateModal">
+      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">
         + Nuevo Producto
       </button>
     </div>
@@ -27,7 +27,8 @@
     <div v-else-if="store.productos.length === 0" class="state-box">
       <h3 class="state-title">Sin productos registrados</h3>
       <p class="state-desc">Registra etiquetas y microlotes para componer las cajas temáticas mensuales.</p>
-      <button class="btn btn-primary" @click="openCreateModal">+ Crear Primer Producto</button>
+      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">+ Crear Primer Producto</button>
+      <p v-else class="state-desc">Iniciá sesión como administrador de una bodega para registrar productos.</p>
     </div>
 
     <!-- Tabla de Productos -->
@@ -80,7 +81,7 @@
               </span>
             </td>
             <td>
-              <div class="actions-cell">
+              <div v-if="authStore.isAdmin" class="actions-cell">
                 <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
                   Modificar
                 </button>
@@ -88,6 +89,7 @@
                   Eliminar
                 </button>
               </div>
+              <span v-else class="text-muted" style="font-size: 0.775rem;">—</span>
             </td>
           </tr>
         </tbody>
@@ -123,9 +125,11 @@ import { useToastStore } from '@/common/store/toast.store';
 import { ProductoDTO } from '../services/productos.service';
 import ProductoModal from '../components/ProductoModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
+import { useAuthStore } from '@/common/store/auth.store';
 
 const store = useProductosStore();
 const toast = useToastStore();
+const authStore = useAuthStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<ProductoDTO | null>(null);

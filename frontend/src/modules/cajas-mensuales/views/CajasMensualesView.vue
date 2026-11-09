@@ -5,7 +5,7 @@
         <h1 class="view-title">Cajas Mensuales (Catálogo)</h1>
         <p class="view-subtitle">Curaduría temática de selecciones mensuales para vinos, cafés y cervezas.</p>
       </div>
-      <button class="btn btn-primary" @click="openCreateModal">
+      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">
         + Nueva Caja Mensual
       </button>
     </div>
@@ -27,7 +27,8 @@
     <div v-else-if="store.cajas.length === 0" class="state-box">
       <h3 class="state-title">Sin cajas mensuales registradas</h3>
       <p class="state-desc">Crea tu primera selección mensual temática para los suscriptores.</p>
-      <button class="btn btn-primary" @click="openCreateModal">+ Crear Primer Caja</button>
+      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">+ Crear Primer Caja</button>
+      <p v-else class="state-desc">Iniciá sesión como administrador para crear cajas mensuales.</p>
     </div>
 
     <!-- Tabla de Cajas Mensuales -->
@@ -66,7 +67,7 @@
               </span>
             </td>
             <td>
-              <div class="actions-cell">
+              <div v-if="authStore.isAdmin" class="actions-cell">
                 <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
                   Modificar
                 </button>
@@ -74,6 +75,7 @@
                   Eliminar
                 </button>
               </div>
+              <span v-else class="text-muted">—</span>
             </td>
           </tr>
         </tbody>
@@ -109,9 +111,11 @@ import { useToastStore } from '@/common/store/toast.store';
 import { CajaMensualDTO } from '../services/cajas-mensuales.service';
 import CajaMensualModal from '../components/CajaMensualModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
+import { useAuthStore } from '@/common/store/auth.store';
 
 const store = useCajasMensualesStore();
 const toast = useToastStore();
+const authStore = useAuthStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<CajaMensualDTO | null>(null);

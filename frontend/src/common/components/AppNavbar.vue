@@ -16,12 +16,36 @@
         <router-link to="/cajas-mensuales" class="nav-link" active-class="active">Cajas Mensuales</router-link>
         <router-link to="/productos" class="nav-link" active-class="active">Productos</router-link>
       </nav>
+
+      <div class="auth-area">
+        <template v-if="authStore.isAuthenticated">
+          <div class="session-info">
+            <span class="session-name">{{ authStore.displayName }}</span>
+            <span class="session-tenant">{{ authStore.tenantName || authStore.user?.role }}</span>
+          </div>
+          <button class="btn btn-secondary btn-sm" @click="handleLogout">Cerrar Sesión</button>
+        </template>
+        <template v-else>
+          <router-link to="/login" class="nav-link" active-class="active">Ingresar</router-link>
+          <router-link to="/register" class="nav-link" active-class="active">Registrarse</router-link>
+        </template>
+      </div>
     </div>
   </header>
 </template>
 
 <script setup lang="ts">
 // Navbar de navegación con paleta de lujo
+import { useRouter } from 'vue-router';
+import { useAuthStore } from '@/common/store/auth.store';
+
+const router = useRouter();
+const authStore = useAuthStore();
+
+const handleLogout = async () => {
+  await authStore.logout();
+  router.push('/login');
+};
 </script>
 
 <style scoped>
@@ -111,6 +135,32 @@
   font-weight: 600;
 }
 
+.auth-area {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.session-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.2;
+}
+
+.session-name {
+  color: var(--color-light);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.session-tenant {
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 @media (max-width: 768px) {
   .navbar-container {
     flex-direction: column;
@@ -121,6 +171,10 @@
     width: 100%;
     overflow-x: auto;
     padding-bottom: 0.25rem;
+  }
+  .auth-area {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 </style>
