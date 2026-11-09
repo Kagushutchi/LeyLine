@@ -37,6 +37,13 @@ export class CajaMensual {
   @Column({ type: 'boolean', default: true })
   disponible: boolean;
 
+  /**
+   * Bodega/tostadero propietario de la caja mensual (multi-tenancy).
+   * Nullable: compatibilidad con cajas creadas antes de la multi-tenancy.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

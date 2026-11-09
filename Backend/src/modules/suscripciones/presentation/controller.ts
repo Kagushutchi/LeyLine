@@ -23,28 +23,28 @@ export default class SuscripcionesController {
     return await useCase.execute(suscriptorId);
   }
 
-  async createSuscripcion(payload: any): Promise<any> {
+  async createSuscripcion(payload: any, tenantId?: string): Promise<any> {
     const useCase = new CreateSuscripcion();
-    return await useCase.execute(payload);
+    return await useCase.execute(payload, tenantId);
   }
 
-  async updateSuscripcion(id: string | number, payload: any): Promise<any> {
+  async updateSuscripcion(id: string | number, payload: any, tenantId?: string): Promise<any> {
     const useCase = new UpdateSuscripcion();
-    return await useCase.execute(id, payload);
+    return await useCase.execute(id, payload, tenantId);
   }
 
-  async pauseSuscripcion(id: string | number): Promise<any> {
+  async pauseSuscripcion(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new PauseSuscripcion();
-    return await useCase.execute(id);
+    return await useCase.execute(id, tenantId);
   }
 
-  async cancelSuscripcion(id: string | number): Promise<any> {
+  async cancelSuscripcion(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new CancelSuscripcion();
-    return await useCase.execute(id);
+    return await useCase.execute(id, tenantId);
   }
 
-  async deleteSuscripcion(id: string | number): Promise<any> {
+  async deleteSuscripcion(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new DeleteSuscripcion();
-    return await useCase.execute(id);
+    return await useCase.execute(id, tenantId);
   }
 }

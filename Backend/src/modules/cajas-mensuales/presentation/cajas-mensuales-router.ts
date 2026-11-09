@@ -8,6 +8,9 @@ import {
   cajaMensualIdParamSchema,
   periodoParamSchema,
 } from "./caja-mensual.schema";
+import { authMiddleware } from "../../../common/middlewares/auth.middleware";
+import { requireRole } from "../../../common/middlewares/roles.middleware";
+import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
 
 class CajasMensualesRouter {
   private router: Router;
@@ -26,6 +29,7 @@ class CajasMensualesRouter {
   public createRouter(): Router {
     const router = Router();
 
+    // Catálogo: lectura pública.
     router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
       try {
         const result = await this.controller.getCajasMensuales();
@@ -56,14 +60,22 @@ class CajasMensualesRouter {
       }
     });
 
-    router.post(this.BASE_URL, validateBody(createCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const result = await this.controller.createCajaMensual(req.body);
-        res.status(201).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    // Escritura: sólo administradores autenticados, acotados a su propio tenant.
+    router.post(
+      this.BASE_URL,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      validateBody(createCajaMensualSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const result = await this.controller.createCajaMensual(req.body, req.tenantId);
+          res.status(201).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
     router.post(`${this.BASE_URL}recomendar`, validateBody(recommendCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
@@ -75,25 +87,40 @@ class CajasMensualesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), validateBody(updateCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.updateCajaMensual(id, req.body);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.put(
+      `${this.BASE_URL}:id`,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      validateParams(cajaMensualIdParamSchema),
+      validateBody(updateCajaMensualSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { id } = req.params;
+          const result = await this.controller.updateCajaMensual(id, req.body, req.tenantId);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
-    router.delete(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.deleteCajaMensual(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.delete(
+      `${this.BASE_URL}:id`,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      validateParams(cajaMensualIdParamSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { id } = req.params;
+          const result = await this.controller.deleteCajaMensual(id, req.tenantId);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
     return router;
   }

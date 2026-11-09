@@ -57,6 +57,13 @@ export class Suscriptor {
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
+  /**
+   * Bodega/tostadero que gestiona a este suscriptor (multi-tenancy).
+   * Nullable: compatibilidad con suscriptores creados antes de la multi-tenancy.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

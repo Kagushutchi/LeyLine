@@ -47,6 +47,13 @@ export class Suscripcion {
   @Column({ type: 'date', nullable: true })
   proximoCobro: Date;
 
+  /**
+   * Bodega/tostadero que gestiona esta suscripción (multi-tenancy).
+   * Nullable: compatibilidad con suscripciones creadas antes de la multi-tenancy.
+   */
+  @Column({ type: 'uuid', nullable: true })
+  tenantId?: string;
+
   @CreateDateColumn()
   createdAt: Date;
 

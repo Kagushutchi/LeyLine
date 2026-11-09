@@ -7,6 +7,8 @@ import {
   suscripcionIdParamSchema,
   suscriptorIdParamSchema,
 } from "./suscripcion.schema";
+import { optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
+import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
 
 class SuscripcionesRouter {
   private router: Router;
@@ -22,6 +24,12 @@ class SuscripcionesRouter {
     return this.router;
   }
 
+  // Nota de diseño: a diferencia de productos/suscriptores/cajas-mensuales, las
+  // suscripciones son auto-gestionables (un cliente puede suscribirse sin ser
+  // administrador). Por eso se usa optionalAuthMiddleware en vez de exigir rol admin:
+  // si hay un administrador autenticado, sus operaciones quedan acotadas a su propio
+  // tenant (tenantScopeMiddleware + assertTenantOwnership en los casos de uso);
+  // si no hay sesión, el flujo público de autogestión sigue funcionando como antes.
   public createRouter(): Router {
     const router = Router();
 
@@ -63,69 +71,82 @@ class SuscripcionesRouter {
       }
     });
 
-    router.post(this.BASE_URL, validateBody(createSuscripcionSchema), async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const result = await this.controller.createSuscripcion(req.body);
-        res.status(201).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.post(
+      this.BASE_URL,
+      optionalAuthMiddleware,
+      tenantScopeMiddleware,
+      validateBody(createSuscripcionSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const result = await this.controller.createSuscripcion(req.body, req.tenantId);
+          res.status(201).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
-    router.put(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id/pausar`, optionalAuthMiddleware, tenantScopeMiddleware, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.pauseSuscripcion(id);
+        const result = await this.controller.pauseSuscripcion(id, req.tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.patch(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+    router.patch(`${this.BASE_URL}:id/pausar`, optionalAuthMiddleware, tenantScopeMiddleware, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.pauseSuscripcion(id);
+        const result = await this.controller.pauseSuscripcion(id, req.tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.put(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id/cancelar`, optionalAuthMiddleware, tenantScopeMiddleware, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.cancelSuscripcion(id);
+        const result = await this.controller.cancelSuscripcion(id, req.tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.patch(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+    router.patch(`${this.BASE_URL}:id/cancelar`, optionalAuthMiddleware, tenantScopeMiddleware, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.cancelSuscripcion(id);
+        const result = await this.controller.cancelSuscripcion(id, req.tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.put(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), validateBody(updateSuscripcionSchema), async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.updateSuscripcion(id, req.body);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.put(
+      `${this.BASE_URL}:id`,
+      optionalAuthMiddleware,
+      tenantScopeMiddleware,
+      validateParams(suscripcionIdParamSchema),
+      validateBody(updateSuscripcionSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { id } = req.params;
+          const result = await this.controller.updateSuscripcion(id, req.body, req.tenantId);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
       }
-    });
+    );
 
-    router.delete(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+    router.delete(`${this.BASE_URL}:id`, optionalAuthMiddleware, tenantScopeMiddleware, validateParams(suscripcionIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.deleteSuscripcion(id);
+        const result = await this.controller.deleteSuscripcion(id, req.tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);

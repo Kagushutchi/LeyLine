@@ -2,6 +2,7 @@ import { IBaseRepository } from "../../../../common/interfaces/base-repository.i
 import { Suscriptor } from "../../infrastructure/suscriptor.entity";
 import { SuscriptorRepository } from "../../infrastructure/suscriptor-repository";
 import { AppError } from "../../../../common/errors/app-error";
+import { assertTenantOwnership } from "../../../../common/utils/tenant-ownership";
 
 export default class UpdateSuscriptor
 {
@@ -11,7 +12,7 @@ export default class UpdateSuscriptor
         this.repository = new SuscriptorRepository();
     }
 
-    async execute(id: string | number, payload: Partial<Suscriptor>): Promise<Suscriptor>
+    async execute(id: string | number, payload: Partial<Suscriptor>, tenantId?: string): Promise<Suscriptor>
     {
         const current = await this.repository.findOneById(id);
 
@@ -19,6 +20,8 @@ export default class UpdateSuscriptor
         {
             throw new AppError('Cliente no encontrado', 404);
         }
+
+        assertTenantOwnership(current.tenantId, tenantId);
 
         if (payload.nombre !== undefined && !payload.nombre.trim())
         {

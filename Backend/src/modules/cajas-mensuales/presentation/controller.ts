@@ -22,9 +22,9 @@ export default class CajasMensualesController {
     return await useCase.execute(mes, anio);
   }
 
-  async createCajaMensual(payload: any): Promise<any> {
+  async createCajaMensual(payload: any, tenantId?: string): Promise<any> {
     const useCase = new CreateCajaMensual();
-    return await useCase.execute(payload);
+    return await useCase.execute(payload, tenantId);
   }
 
   async recommendCajaMensual(suscriptorId: string, preferencias?: any): Promise<any> {
@@ -32,13 +32,13 @@ export default class CajasMensualesController {
     return await useCase.execute(suscriptorId, preferencias);
   }
 
-  async updateCajaMensual(id: string | number, payload: any): Promise<any> {
+  async updateCajaMensual(id: string | number, payload: any, tenantId?: string): Promise<any> {
     const useCase = new UpdateCajaMensual();
-    return await useCase.execute(id, payload);
+    return await useCase.execute(id, payload, tenantId);
   }
 
-  async deleteCajaMensual(id: string | number): Promise<any> {
+  async deleteCajaMensual(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new DeleteCajaMensual();
-    return await useCase.execute(id);
+    return await useCase.execute(id, tenantId);
   }
 }

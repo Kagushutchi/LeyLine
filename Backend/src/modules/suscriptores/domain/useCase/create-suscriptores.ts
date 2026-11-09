@@ -12,7 +12,7 @@ export default class CreateSuscriptor
         this.repository = new SuscriptorRepository();
     }
 
-    async execute(payload: Partial<Suscriptor>): Promise<Suscriptor>
+    async execute(payload: Partial<Suscriptor>, tenantId?: string): Promise<Suscriptor>
     {
         if (!payload.nombre?.trim())
         {
@@ -28,11 +28,12 @@ export default class CreateSuscriptor
         {
             throw new AppError('El email no tiene un formato válido', 400);
         }
-        
+
         return await this.repository.save({
             ...payload,
             nombre: payload.nombre.trim(),
             email: payload.email.trim().toLowerCase(),
+            ...(tenantId ? { tenantId } : {}),
         } as Suscriptor);
     }
 }

@@ -14,7 +14,7 @@ export default class CreateSuscripcion {
     this.repository = new SuscripcionRepository();
   }
 
-  async execute(payload: Partial<Suscripcion>): Promise<Suscripcion> {
+  async execute(payload: Partial<Suscripcion>, tenantId?: string): Promise<Suscripcion> {
     if (!payload.suscriptorId || !payload.cajaMensualId) {
       throw new AppError('suscriptorId y cajaMensualId son requeridos para dar de alta una suscripción', 400);
     }
@@ -50,6 +50,9 @@ export default class CreateSuscripcion {
     suscripcion.estado = estado;
     suscripcion.fechaInicio = payload.fechaInicio ? new Date(payload.fechaInicio) : new Date();
     suscripcion.proximoCobro = payload.proximoCobro ? new Date(payload.proximoCobro) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    if (tenantId) {
+      suscripcion.tenantId = tenantId;
+    }
 
     return await this.repository.save(suscripcion);
   }
