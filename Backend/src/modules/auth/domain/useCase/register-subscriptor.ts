@@ -1,7 +1,7 @@
 import { AppError } from '../../../../common/errors/app-error';
 import { JwtUtils } from '../../../../common/utils/jwt';
 import { DataSource } from 'typeorm';
-import { dataSource } from '../../../../app';
+import { getDataSource } from '../../../../config/database.config';
 import { User } from '../../infrastructure/user.entity';
 import { Suscriptor } from '../../../suscriptores/infrastructure/suscriptor.entity';
 
@@ -14,7 +14,7 @@ export interface RegisterSubscriptorDTO {
 }
 
 export default class RegisterSubscriptor {
-  constructor(private readonly db: DataSource = dataSource) {}
+  constructor(private readonly db: DataSource = getDataSource()) {}
 
   async execute(dto: RegisterSubscriptorDTO) {
     const { email, username, nombre, apellido, password } = dto;

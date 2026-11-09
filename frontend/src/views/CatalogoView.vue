@@ -50,16 +50,16 @@
             <button
               v-if="sub.estado === 'activa'"
               class="btn btn-secondary btn-sm"
-              @click="handlePause(sub.id)"
               :disabled="actionLoading === sub.id"
+              @click="handlePause(sub.id)"
             >
               Pausar
             </button>
             <button
               v-if="sub.estado !== 'cancelada'"
               class="btn btn-outline-danger btn-sm"
-              @click="handleCancel(sub.id)"
               :disabled="actionLoading === sub.id"
+              @click="handleCancel(sub.id)"
             >
               Cancelar
             </button>
@@ -145,8 +145,8 @@
           <button
             v-else-if="caja.disponible"
             class="btn btn-primary btn-sm"
-            @click="handleSubscribe(caja)"
             :disabled="actionLoading === caja.id || !!errorSuscripciones || (requestsEnabled && (!requests.ready || !!requests.draft || hasPendingRequest(caja.id)))"
+            @click="handleSubscribe(caja)"
           >
             <span v-if="actionLoading === caja.id">Procesando...</span>
             <span v-else>Suscribirme</span>
@@ -156,7 +156,8 @@
     </div>
     <dialog ref="confirmDialog" class="confirm-dialog" aria-labelledby="confirm-title" @close="onDialogClose">
       <h2 id="confirm-title">Confirmar solicitud</h2>
-      <p>Solicitar la caja <strong>{{ selectedCaja?.nombre }}</strong> por
+      <p>
+        Solicitar la caja <strong>{{ selectedCaja?.nombre }}</strong> por
         <strong>${{ selectedCaja ? Number(selectedCaja.precioBase).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '' }} / mes</strong>.
       </p>
       <p>La solicitud se procesará después de enviarla; la membresía todavía no estará activa.</p>

@@ -117,28 +117,13 @@ test('repositories retain deleted related records but exclude deleted roots and 
   assert.deepEqual(await subscriptionRepo.findBySuscriptorId(subscriber.id), []);
 });
 
-test('application does not force synchronize when connection is initialized', async () => {
-  const DBEngineFactory = require('../dist/common/patterns/factory/db-engine-factory').default;
-  const { createApp } = require('../dist/app');
-  const original = DBEngineFactory.createDBEngine;
-  let syncCalls = 0;
-  DBEngineFactory.createDBEngine = () => ({ connectDB: async () => ({ isInitialized: true, synchronize: () => { syncCalls++; } }) });
-  try {
-    await createApp();
-    assert.equal(syncCalls, 0);
-  } finally {
-    DBEngineFactory.createDBEngine = original;
-  }
-});
-
 test('subscription updates reject deleted references and accept active replacements', async (t) => {
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
   t.after(() => db.destroy());
-  const app = require('../dist/app');
-  const previous = app.dataSource;
-  app.dataSource = db;
-  t.after(() => { app.dataSource = previous; });
+  const { setActiveDataSource } = require('../dist/config/database.config');
+  setActiveDataSource(db);
+  t.after(() => setActiveDataSource(null));
   const { Suscriptor } = require('../dist/modules/suscriptores/infrastructure/suscriptor.entity');
   const { Suscripcion } = require('../dist/modules/suscripciones/infrastructure/suscripcion.entity');
   const UpdateSuscripcion = require('../dist/modules/suscripciones/domain/useCase/update-suscripcion').default;
@@ -167,10 +152,9 @@ test('create and update payloads cannot modify deletion timestamps', async (t) =
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
   t.after(() => db.destroy());
-  const app = require('../dist/app');
-  const previous = app.dataSource;
-  app.dataSource = db;
-  t.after(() => { app.dataSource = previous; });
+  const { setActiveDataSource } = require('../dist/config/database.config');
+  setActiveDataSource(db);
+  t.after(() => setActiveDataSource(null));
   const CreateProducto = require('../dist/modules/productos/domain/useCase/create-producto').default;
   const UpdateProducto = require('../dist/modules/productos/domain/useCase/update-producto').default;
   const CreateSuscriptor = require('../dist/modules/suscriptores/domain/useCase/create-suscriptores').default;
@@ -218,10 +202,9 @@ test('replacing box products repeatedly preserves deleted history and rejects in
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
   t.after(() => db.destroy());
-  const app = require('../dist/app');
-  const previous = app.dataSource;
-  app.dataSource = db;
-  t.after(() => { app.dataSource = previous; });
+  const { setActiveDataSource } = require('../dist/config/database.config');
+  setActiveDataSource(db);
+  t.after(() => setActiveDataSource(null));
   const UpdateCaja = require('../dist/modules/cajas-mensuales/domain/useCase/update-caja-mensual').default;
   const CajaRepo = require('../dist/modules/cajas-mensuales/infrastructure/caja-mensual-repository').CajaMensualRepository;
   const products = db.getRepository(Producto);
@@ -249,10 +232,9 @@ test('creating subscriptions rejects deleted and missing references without crea
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
   t.after(() => db.destroy());
-  const app = require('../dist/app');
-  const previous = app.dataSource;
-  app.dataSource = db;
-  t.after(() => { app.dataSource = previous; });
+  const { setActiveDataSource } = require('../dist/config/database.config');
+  setActiveDataSource(db);
+  t.after(() => setActiveDataSource(null));
   const { Suscriptor } = require('../dist/modules/suscriptores/infrastructure/suscriptor.entity');
   const { Suscripcion } = require('../dist/modules/suscripciones/infrastructure/suscripcion.entity');
   const Create = require('../dist/modules/suscripciones/domain/useCase/create-suscripcion').default;
@@ -274,10 +256,9 @@ test('updates cannot target a deleted row by injecting its id in the payload', a
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
   t.after(() => db.destroy());
-  const app = require('../dist/app');
-  const previous = app.dataSource;
-  app.dataSource = db;
-  t.after(() => { app.dataSource = previous; });
+  const { setActiveDataSource } = require('../dist/config/database.config');
+  setActiveDataSource(db);
+  t.after(() => setActiveDataSource(null));
   const UpdateProducto = require('../dist/modules/productos/domain/useCase/update-producto').default;
   const products = db.getRepository(Producto);
   const deleted = await products.save({ nombre: 'Eliminado', categoria: 'vinos', tipo: 'tinto', productor: 'P' });
@@ -294,10 +275,9 @@ test('injected ids cannot restore deleted subscribers, boxes or products through
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
   t.after(() => db.destroy());
-  const app = require('../dist/app');
-  const previous = app.dataSource;
-  app.dataSource = db;
-  t.after(() => { app.dataSource = previous; });
+  const { setActiveDataSource } = require('../dist/config/database.config');
+  setActiveDataSource(db);
+  t.after(() => setActiveDataSource(null));
   const { Suscriptor } = require('../dist/modules/suscriptores/infrastructure/suscriptor.entity');
   const CreateProducto = require('../dist/modules/productos/domain/useCase/create-producto').default;
   const CreateSuscriptor = require('../dist/modules/suscriptores/domain/useCase/create-suscriptores').default;

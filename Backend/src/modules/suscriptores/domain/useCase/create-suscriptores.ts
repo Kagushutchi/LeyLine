@@ -27,13 +27,13 @@ export default class CreateSuscriptor
         {
             throw new AppError('El email no tiene un formato válido', 400);
         }
-        
-        const { id: _id, deletedAt: _deletedAt, ...changes } = payload;
+        // The tenant always comes from the authenticated caller, never from the body.
+        const { id: _id, deletedAt: _deletedAt, tenantId: _tenantId, ...changes } = payload;
         return await this.repository.save({
             ...changes,
             nombre: payload.nombre.trim(),
             email: payload.email.trim().toLowerCase(),
-            tenantId: tenantId || payload.tenantId,
+            ...(tenantId ? { tenantId } : {}),
         } as Suscriptor);
     }
 }

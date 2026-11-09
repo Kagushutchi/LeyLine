@@ -6,22 +6,29 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsc && node --test test/*.test.cjs test/messaging/*.test.cjs",
     "start": "node dist/server.js",
-    "worker": "tsx src/workers/queue-worker.ts",
-    "worker:prod": "node dist/workers/queue-worker.js",
-    "queue:stats": "tsx src/workers/queue-admin.ts stats",
-    "queue:replay": "tsx src/workers/queue-admin.ts replay",
     "typeorm": "typeorm-ts-node-commonjs",
     "schema:sync": "typeorm-ts-node-commonjs schema:sync -d src/config/database.config.ts",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.config.ts",
     "migration:run": "typeorm-ts-node-commonjs migration:run -d src/config/database.config.ts",
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
     "migration:create": "typeorm-ts-node-commonjs migration:create",
-    "seed": "tsx src/seeds/seed.ts"
+    "seed": "tsx src/seeds/seed.ts",
+    "lint": "eslint src tests",
+    "format": "prettier --write \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run && npm run test:queue",
+    "test:watch": "vitest",
+    "openapi:export": "tsx scripts/export-openapi.ts",
+    "worker": "tsx src/workers/queue-worker.ts",
+    "worker:prod": "node dist/workers/queue-worker.js",
+    "queue:stats": "tsx src/workers/queue-admin.ts stats",
+    "queue:replay": "tsx src/workers/queue-admin.ts replay",
+    "test:queue": "tsc && node --test test/*.test.cjs test/messaging/*.test.cjs"
   },
   "dependencies": {
     "amqplib": "^2.3.1",
+    "axios": "^1.21.0",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -29,10 +36,14 @@
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.13.1",
     "reflect-metadata": "^0.2.2",
+    "soap": "^1.14.0",
     "sqlite3": "^6.0.1",
-    "typeorm": "^0.3.20"
+    "swagger-ui-express": "^5.0.1",
+    "typeorm": "^0.3.20",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/amqplib": "^0.10.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
@@ -40,8 +51,15 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.10.7",
     "@types/pg": "^8.11.10",
+    "@types/supertest": "^7.2.1",
+    "@types/swagger-ui-express": "^4.1.8",
+    "eslint": "^10.14.0",
+    "prettier": "^3.9.10",
+    "supertest": "^7.3.1",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.72.1",
+    "vitest": "^5.1.0"
   }
 }

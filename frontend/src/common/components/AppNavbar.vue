@@ -24,7 +24,7 @@
       </nav>
 
       <!-- Área de usuario / acciones -->
-      <div class="nav-user" v-if="authStore.isAuthenticated">
+      <div v-if="authStore.isAuthenticated" class="nav-user">
         <div class="user-info">
           <span class="user-name">{{ authStore.displayName }}</span>
           <span class="user-badge" :class="authStore.isAdmin ? 'badge-admin' : 'badge-subscriptor'">
@@ -34,13 +34,13 @@
             {{ authStore.tenantName }}
           </span>
         </div>
-        <button class="btn-logout" @click="handleLogout" :disabled="authStore.loading">
+        <button class="btn-logout" :disabled="authStore.loading" @click="handleLogout">
           Salir
         </button>
       </div>
 
       <!-- Si no está autenticado (páginas guest) -->
-      <div class="nav-guest" v-if="!authStore.isAuthenticated">
+      <div v-if="!authStore.isAuthenticated" class="nav-guest">
         <router-link to="/login" class="nav-link">Ingresar</router-link>
         <router-link to="/register" class="nav-link">Registrarse</router-link>
       </div>

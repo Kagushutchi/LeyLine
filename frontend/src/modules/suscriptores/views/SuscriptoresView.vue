@@ -5,7 +5,7 @@
         <h1 class="view-title">Suscriptores (Clientes)</h1>
         <p class="view-subtitle">Gestión de miembros exclusivos y registro de perfil organoléptico.</p>
       </div>
-      <button class="btn btn-primary" @click="openCreateModal">
+      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">
         + Nuevo Suscriptor
       </button>
     </div>
@@ -27,7 +27,8 @@
     <div v-else-if="store.suscriptores.length === 0" class="state-box">
       <h3 class="state-title">Sin suscriptores registrados</h3>
       <p class="state-desc">Comienza registrando al primer miembro para este club de especialidad.</p>
-      <button class="btn btn-primary" @click="openCreateModal">+ Crear Primer Suscriptor</button>
+      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">+ Crear Primer Suscriptor</button>
+      <p v-else class="state-desc">Iniciá sesión como administrador para registrar suscriptores.</p>
     </div>
 
     <!-- Tabla de Datos -->
@@ -71,7 +72,7 @@
               </span>
             </td>
             <td>
-              <div class="actions-cell">
+              <div v-if="authStore.isAdmin" class="actions-cell">
                 <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
                   Modificar
                 </button>
@@ -79,6 +80,7 @@
                   Eliminar
                 </button>
               </div>
+              <span v-else class="text-muted">—</span>
             </td>
           </tr>
         </tbody>
@@ -114,9 +116,11 @@ import { useToastStore } from '@/common/store/toast.store';
 import { SuscriptorDTO } from '../services/suscriptores.service';
 import SuscriptorModal from '../components/SuscriptorModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
+import { useAuthStore } from '@/common/store/auth.store';
 
 const store = useSuscriptoresStore();
 const toast = useToastStore();
+const authStore = useAuthStore();
 
 const isModalOpen = ref(false);
 const selectedItem = ref<SuscriptorDTO | null>(null);

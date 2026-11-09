@@ -142,7 +142,7 @@ flowchart LR
 
 **Habilitar**
 1. `npm run migration:run` (incluye `1799` con índices de rendimiento). Revisar antes el historial del entorno: si `1797…` ya corrió, no editarla. La `1798…` falla con mensaje claro si hay duplicados vivos (resolverlos primero).
-   > Al arrancar en PostgreSQL la API solo ejecuta sola las migraciones `1794` y `1795`. Las `1796`–`1798` se aplican con `migration:run` (imprescindible con `DB_SYNCHRONIZE=false`).
+   > La API ya no ejecuta migraciones al arrancar: con `DB_SYNCHRONIZE=false` hay que correr siempre `npm run migration:run`. La cadena completa (`1793…` a `1799100…`) se probó sobre un PostgreSQL vacío. Las migraciones `1793…`/`1794100…` (rama de auth/multitenancy) son solo de PostgreSQL; con SQLite se usa `DB_SYNCHRONIZE=true`.
 2. Levantar RabbitMQ y el worker con `QUEUE_RUNTIME_ENABLED=true`; revisar `npm run queue:stats`.
 3. Activar `SUBSCRIPTION_REQUESTS_ENABLED=true` y verificar `/api/health`.
 4. Construir el frontend con el flag y desplegar gradualmente.

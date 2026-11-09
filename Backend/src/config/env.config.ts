@@ -2,8 +2,10 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
+const port = parseInt(process.env.PORT || '3000', 10);
+
 export const envConfig = {
-  port: parseInt(process.env.PORT || '3000', 10),
+  port,
   nodeEnv: process.env.NODE_ENV || 'development',
   corsOrigin: process.env.CORS_ORIGIN || '*',
   db: {
@@ -17,10 +19,15 @@ export const envConfig = {
     synchronize: process.env.DB_SYNCHRONIZE !== 'false',
     logging: process.env.DB_LOGGING === 'true',
   },
+  soap: {
+    inventarioEnabled: process.env.SOAP_INVENTARIO_ENABLED !== 'false',
+    inventarioUrl: process.env.SOAP_INVENTARIO_URL || `http://localhost:${port}/soap/inventario`,
+    timeoutMs: parseInt(process.env.SOAP_TIMEOUT_MS || '5000', 10),
+  },
   jwt: {
     secret: process.env.JWT_SECRET || 'clubcurator-secret-access-token-key-2026',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'clubcurator-secret-refresh-token-key-2026',
-    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
+    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 };

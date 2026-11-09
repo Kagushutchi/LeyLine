@@ -1,9 +1,11 @@
 import { Suscripcion } from "../../infrastructure/suscripcion.entity";
 import { SuscripcionRepository } from "../../infrastructure/suscripcion-repository";
 import { AppError } from "../../../../common/errors/app-error";
-import { dataSource } from "../../../../app";
+import { getDataSource } from "../../../../config/database.config";
 import { Suscriptor } from "../../../suscriptores/infrastructure/suscriptor.entity";
-import { CajaMensualRepository } from "../../../cajas-mensuales/infrastructure/caja-mensual-repository";
+import { CajaMensual } from "../../../cajas-mensuales/infrastructure/caja-mensual.entity";
+import { envConfig } from "../../../../config/env.config";
+import { InventarioSoapClient } from "../../../inventario/client/inventario-soap-client";
 
 export default class CreateSuscripcion {
   private repository: SuscripcionRepository;
@@ -12,7 +14,7 @@ export default class CreateSuscripcion {
     this.repository = new SuscripcionRepository();
   }
 
-  async execute(payload: Partial<Suscripcion>): Promise<Suscripcion> {
+  async execute(payload: Partial<Suscripcion>, tenantId?: string): Promise<Suscripcion> {
     if (!payload.suscriptorId || !payload.cajaMensualId) {
       throw new AppError('suscriptorId y cajaMensualId son requeridos para dar de alta una suscripción', 400);
     }
@@ -21,17 +23,23 @@ export default class CreateSuscripcion {
       throw new AppError('El monto mensual debe ser mayor a 0', 400);
     }
 
-    const suscriptor = await dataSource.getRepository(Suscriptor).findOneBy({ id: payload.suscriptorId });
+    const suscriptor = await getDataSource().getRepository(Suscriptor).findOneBy({ id: payload.suscriptorId });
     if (!suscriptor) throw new AppError(`Suscriptor con ID ${payload.suscriptorId} no encontrado`, 404);
 
-    const cajaMensual = await new CajaMensualRepository().findOneById(payload.cajaMensualId);
+    const cajaMensual = await getDataSource().getRepository(CajaMensual).findOne({
+      where: { id: payload.cajaMensualId },
+      relations: { composiciones: { producto: true } },
+    });
     if (!cajaMensual) throw new AppError(`Caja mensual con ID ${payload.cajaMensualId} no encontrada`, 404);
     if (!cajaMensual.disponible) throw new AppError('La caja mensual seleccionada no está disponible', 400);
 
-    const live = await dataSource.getRepository(Suscripcion).createQueryBuilder('s')
+    // Business rule: one live (activa/pausada) subscription per subscriber and box.
+    const live = await getDataSource().getRepository(Suscripcion).createQueryBuilder('s')
       .where('s.suscriptorId = :sid AND s.cajaMensualId = :cid AND s.estado IN (:...states)',
         { sid: suscriptor.id, cid: cajaMensual.id, states: ['activa', 'pausada'] }).getCount();
     if (live > 0) throw new AppError('Ya existe una suscripción para esta caja', 409);
+
+    await this.verifyStock(cajaMensual);
 
     const estado = payload.estado || 'activa';
     if (!['activa', 'pausada', 'cancelada'].includes(estado)) {
@@ -48,8 +56,26 @@ export default class CreateSuscripcion {
     suscripcion.estado = estado;
     suscripcion.fechaInicio = payload.fechaInicio ? new Date(payload.fechaInicio) : new Date();
     suscripcion.proximoCobro = payload.proximoCobro ? new Date(payload.proximoCobro) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    suscripcion.tenantId = payload.tenantId || cajaMensual.tenantId;
+    // The tenant comes from the authenticated caller, falling back to the box's own tenant.
+    suscripcion.tenantId = tenantId ?? cajaMensual.tenantId;
 
     return await this.repository.save(suscripcion);
+  }
+
+  private async verifyStock(cajaMensual: CajaMensual): Promise<void> {
+    if (!envConfig.soap.inventarioEnabled) return;
+
+    const inventarioClient = new InventarioSoapClient();
+
+    for (const composicion of cajaMensual.composiciones ?? []) {
+      const inventario = await inventarioClient.consultarInventario(composicion.productoId);
+      if (inventario.cantidadDisponible < composicion.cantidad) {
+        const nombre = composicion.producto?.nombre ?? composicion.productoId;
+        throw new AppError(
+          `Stock insuficiente para ${nombre}: disponible ${inventario.cantidadDisponible}, requerido ${composicion.cantidad}`,
+          409
+        );
+      }
+    }
   }
 }

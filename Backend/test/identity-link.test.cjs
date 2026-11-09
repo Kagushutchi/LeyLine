@@ -7,10 +7,8 @@ const { User } = require('../dist/modules/auth/infrastructure/user.entity');
 const { Suscriptor } = require('../dist/modules/suscriptores/infrastructure/suscriptor.entity');
 const { LinkUsersToSuscriptores1796000000000 } = require('../dist/migrations/1796000000000-LinkUsersToSuscriptores');
 
-// Isolate registration's transaction from JWT signing and application startup.
-const appPath = require.resolve('../dist/app');
+// Isolate registration's transaction from JWT signing.
 const jwtPath = require.resolve('../dist/common/utils/jwt');
-require.cache[appPath] = { id: appPath, filename: appPath, loaded: true, exports: {} };
 require.cache[jwtPath] = { id: jwtPath, filename: jwtPath, loaded: true, exports: { JwtUtils: {
   hashPassword: async () => 'test-hash',
   generateAccessToken: () => 'access',

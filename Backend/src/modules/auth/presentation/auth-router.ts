@@ -1,6 +1,13 @@
 import { NextFunction, Request, Response, Router } from 'express';
 import { authMiddleware } from '../../../common/middlewares/auth.middleware';
+import { validateBody } from '../../../common/middlewares/validation.middleware';
 import AuthController from './controller';
+import {
+  loginSchema,
+  refreshTokenSchema,
+  registerAdminSchema,
+  registerSubscriptorSchema,
+} from './auth.schema';
 
 class AuthRouter {
   private readonly controller = new AuthController();
@@ -9,21 +16,25 @@ class AuthRouter {
   constructor() {
     this.router.post(
       '/register-admin',
+      validateBody(registerAdminSchema),
       this.handle((req) => this.controller.registerAdmin(req.body), 201)
     );
 
     this.router.post(
       '/register-subscriptor',
+      validateBody(registerSubscriptorSchema),
       this.handle((req) => this.controller.registerSubscriptor(req.body), 201)
     );
 
     this.router.post(
       '/login',
+      validateBody(loginSchema),
       this.handle((req) => this.controller.login(req.body), 200)
     );
 
     this.router.post(
       '/refresh',
+      validateBody(refreshTokenSchema),
       this.handle((req) => this.controller.refreshToken(req.body.refreshToken), 200)
     );
 
@@ -57,4 +68,3 @@ class AuthRouter {
 }
 
 export default new AuthRouter().getRouter();
-

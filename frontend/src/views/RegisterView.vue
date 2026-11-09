@@ -28,7 +28,7 @@
       </div>
 
       <!-- Formulario Administrador de Bodega -->
-      <form v-if="selectedRole === 'admin'" @submit.prevent="handleRegisterAdmin" class="auth-form">
+      <form v-if="selectedRole === 'admin'" class="auth-form" @submit.prevent="handleRegisterAdmin">
         <div class="form-group">
           <label for="admin-negocio" class="form-label">Nombre del Negocio / Bodega</label>
           <input
@@ -93,7 +93,7 @@
       </form>
 
       <!-- Formulario Subscriptor / Cliente -->
-      <form v-else @submit.prevent="handleRegisterSubscriptor" class="auth-form">
+      <form v-else class="auth-form" @submit.prevent="handleRegisterSubscriptor">
         <div class="form-row">
           <div class="form-group">
             <label for="sub-nombre" class="form-label">Nombre</label>

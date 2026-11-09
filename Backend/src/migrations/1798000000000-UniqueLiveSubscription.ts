@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
 /** One live (activa/pausada) subscription per subscriber and box. Fails loudly if data already violates it. */
 export class UniqueLiveSubscription1798000000000 implements MigrationInterface {

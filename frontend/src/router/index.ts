@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import { useAuthStore } from '@/common/store/auth.store';
 import DashboardView from '../views/DashboardView.vue';
+import LoginView from '../views/LoginView.vue';
+import RegisterView from '../views/RegisterView.vue';
 import SuscriptoresView from '../modules/suscriptores/views/SuscriptoresView.vue';
 import SuscripcionesView from '../modules/suscripciones/views/SuscripcionesView.vue';
 import CajasMensualesView from '../modules/cajas-mensuales/views/CajasMensualesView.vue';
 import ProductosView from '../modules/productos/views/ProductosView.vue';
-import LoginView from '../views/LoginView.vue';
-import RegisterView from '../views/RegisterView.vue';
 import CatalogoView from '../views/CatalogoView.vue';
 
 // Augmentar RouteMeta para TypeScript

@@ -18,7 +18,7 @@ export default class CreateCajaMensual {
     this.repository = new CajaMensualRepository();
   }
 
-  async execute(payload: Partial<CajaMensual> & { composiciones?: ComposicionPayload[] }): Promise<CajaMensual> {
+  async execute(payload: Partial<CajaMensual> & { composiciones?: ComposicionPayload[] }, tenantId?: string): Promise<CajaMensual> {
     if (!payload.nombre || !payload.categoria || !payload.mes || !payload.anio) {
       throw new AppError('Faltan campos obligatorios para dar de alta la caja mensual (nombre, categoria, mes, anio)', 400);
     }
@@ -35,6 +35,9 @@ export default class CreateCajaMensual {
     caja.descripcion = payload.descripcion;
     caja.precioBase = payload.precioBase ?? 0;
     caja.disponible = payload.disponible ?? true;
+    if (tenantId) {
+      caja.tenantId = tenantId;
+    }
     caja.composiciones = await this.buildComposiciones(payload.composiciones ?? [], caja);
 
     return await this.repository.save(caja);

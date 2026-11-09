@@ -3,6 +3,7 @@ import { Suscripcion } from "../../../modules/suscripciones/infrastructure/suscr
 import { CajaMensual } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual.entity";
 import { CajaMensualProducto } from "../../../modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity";
 import { Producto } from "../../../modules/productos/infrastructure/producto.entity";
+import { StockProducto } from "../../../modules/inventario/infrastructure/stock-producto.entity";
 import { Tenant } from "../../../modules/auth/infrastructure/tenant.entity";
 import { User } from "../../../modules/auth/infrastructure/user.entity";
 import { SolicitudSuscripcion } from "../../../modules/solicitudes-suscripcion/infrastructure/solicitud.entity";
@@ -17,6 +18,7 @@ export const entities = [
     CajaMensual,
     CajaMensualProducto,
     Producto,
+    StockProducto,
     SolicitudSuscripcion,
     MensajeOutbox,
     MensajeInbox

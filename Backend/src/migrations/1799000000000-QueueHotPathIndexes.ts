@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 
 /** Keeps the relay's polling query and the duplicate check fast as history grows. */
 export class QueueHotPathIndexes1799000000000 implements MigrationInterface {

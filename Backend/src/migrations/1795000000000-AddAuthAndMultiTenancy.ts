@@ -1,4 +1,4 @@
-import { MigrationInterface, QueryRunner } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
 import bcrypt from 'bcryptjs';
 
 export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {

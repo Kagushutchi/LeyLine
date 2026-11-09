@@ -80,16 +80,15 @@ La base se selecciona mediante `DB_TYPE`, sin modificar los módulos de negocio.
 
 ```mermaid
 flowchart LR
-    ENV[DB_TYPE] --> F[DBEngineFactory]
-    F -->|sqlite| S[SqliteORM]
-    F -->|postgres| P[PostgresORM]
-    S --> DS[DataSource]
-    P --> DS
+    ENV[DB_TYPE] --> F[DatabaseFactory]
+    F -->|sqlite| DS[AppDataSource única]
+    F -->|postgres| DS
     DS --> E[Entidades registradas]
     DS --> DB[(SQLite / PostgreSQL)]
+    REP[Repositorios] -->|getDataSource()| DS
 ```
 
-Esta decisión permite usar SQLite para desarrollo local y PostgreSQL para un entorno más cercano a producción. Los repositories dependen del `DataSource`, no de una implementación concreta del motor.
+Existe **una única** instancia de `DataSource` creada por `DatabaseFactory` en `config/database.config.ts`. Los repositorios no crean conexiones propias: acceden a la conexión activa mediante `getDataSource()`. Esto permite usar SQLite para desarrollo local y PostgreSQL para un entorno más cercano a producción sin modificar los módulos de negocio.
 
 ## 5. Patrones que desacoplan decisiones
 
@@ -122,3 +121,43 @@ flowchart BT
 ```
 
 La dirección buscada es que HTTP y ORM sean detalles externos. Las reglas de negocio deben vivir en los casos de uso y no depender de `Request`, `Response` ni de consultas SQL directas.
+
+## 7. Contratos REST y SOAP
+
+La API REST se documenta con OpenAPI 3.0.3 desde un objeto central en `src/config/openapi.ts`. La aplicación sirve Swagger UI en `/api/docs` y el JSON en `/api/docs.json`; además, `npm run openapi:export` genera `docs/openapi.json` para versionar el contrato.
+
+El inventario se expone como servicio SOAP dentro del mismo proceso Express:
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente
+    participant API as Express /api/suscripciones
+    participant UC as CreateSuscripcion
+    participant SC as InventarioSoapClient
+    participant SOAP as Servicio SOAP
+    participant DB as stock_productos
+
+    C->>API: POST /api/suscripciones
+    API->>UC: execute(dto)
+    UC->>SC: consultarInventario(productoId)
+    SC->>SOAP: POST /soap/inventario
+    SOAP->>DB: SELECT stock
+    DB-->>SOAP: cantidadDisponible
+    SOAP-->>SC: inventario
+    alt stock suficiente
+        SC-->>UC: ok
+        UC-->>API: suscripción creada
+        API-->>C: 201
+    else stock insuficiente
+        SC-->>UC: faltante
+        UC-->>API: AppError 409
+        API-->>C: 409
+    end
+```
+
+- `src/modules/inventario/soap/`: WSDL embebido, servicio y arranque del endpoint `/soap/inventario`.
+- `src/modules/inventario/client/`: cliente SOAP con timeout usado por el alta de suscripciones.
+- `src/modules/inventario/infrastructure/`: entidad `StockProducto` y repositorio.
+- Variables: `SOAP_INVENTARIO_ENABLED`, `SOAP_INVENTARIO_URL`, `SOAP_TIMEOUT_MS`.
+
+El contrato y los ejemplos de invocación están en [contratos-servicios.md](contratos-servicios.md).

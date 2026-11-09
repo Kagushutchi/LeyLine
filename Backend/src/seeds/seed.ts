@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
-import DBEngineFactory from '../common/patterns/factory/db-engine-factory';
+import { AppDataSource } from '../config/database.config';
 import { logger } from '../common/utils/logger';
 
 import { Producto } from '../modules/productos/infrastructure/producto.entity';
@@ -8,6 +8,10 @@ import { CajaMensual } from '../modules/cajas-mensuales/infrastructure/caja-mens
 import { CajaMensualProducto } from '../modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity';
 import { Suscriptor } from '../modules/suscriptores/infrastructure/suscriptor.entity';
 import { Suscripcion } from '../modules/suscripciones/infrastructure/suscripcion.entity';
+import { StockProducto } from '../modules/inventario/infrastructure/stock-producto.entity';
+import { Tenant } from '../modules/auth/infrastructure/tenant.entity';
+import { User } from '../modules/auth/infrastructure/user.entity';
+import { JwtUtils } from '../common/utils/jwt';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -263,9 +267,11 @@ const suscriptoresData: Partial<Suscriptor>[] = [
 async function seed(): Promise<void> {
   logger.info('=== ClubCurator — Iniciando carga de datos de prueba ===');
 
-  // 1. Conectar usando el mismo factory que utiliza app.ts
-  const database = DBEngineFactory.createDBEngine();
-  const ds: DataSource = await database.connectDB();
+  // 1. Conectar usando la misma instancia que utiliza el servidor
+  if (!AppDataSource.isInitialized) {
+    await AppDataSource.initialize();
+  }
+  const ds: DataSource = AppDataSource;
   logger.info(`Conexión establecida (${ds.options.type})`);
 
   // 2. Verificar si ya existen datos para evitar duplicados
@@ -275,9 +281,38 @@ async function seed(): Promise<void> {
       `Ya existen ${productosExistentes} producto(s) en la base de datos. ` +
         'Abortando seed para evitar duplicados. Limpia la BD antes de volver a sembrar.',
     );
-    await database.disconnectDB();
+    await AppDataSource.destroy();
     return;
   }
+
+  // ── 2.1 Tenant y usuario administrador de demo ────────────────────────────
+  logger.info('Insertando tenant y usuario administrador de demo...');
+  const tenantRepo = ds.getRepository(Tenant);
+  const userRepo = ds.getRepository(User);
+
+  const demoTenant = await tenantRepo.save(
+    tenantRepo.create({
+      nombre: 'ClubCurator Demo',
+      slug: 'clubcurator-demo',
+      plan: 'artesanal',
+      activo: true,
+    })
+  );
+
+  const demoAdminPassword = 'Password123';
+  await userRepo.save(
+    userRepo.create({
+      username: 'admin-demo',
+      email: 'admin@clubcurator.demo',
+      password: await JwtUtils.hashPassword(demoAdminPassword),
+      role: 'admin',
+      tenantId: demoTenant.id,
+      activo: true,
+    })
+  );
+  logger.info(
+    `  ✔ Tenant '${demoTenant.nombre}' creado. Login de demo: admin@clubcurator.demo / ${demoAdminPassword}`
+  );
 
   // ── 3. Productos ──────────────────────────────────────────────────────────
   logger.info('Insertando productos...');
@@ -285,10 +320,29 @@ async function seed(): Promise<void> {
   const productosGuardados: Producto[] = [];
 
   for (const data of productosData) {
-    const producto = productoRepo.create(data);
+    const producto = productoRepo.create({ ...data, tenantId: demoTenant.id });
     productosGuardados.push(await productoRepo.save(producto));
   }
   logger.info(`  ✔ ${productosGuardados.length} productos creados.`);
+
+  // ── 3.1 Stock por producto y productor ───────────────────────────────────
+  logger.info('Insertando stock de inventario...');
+  const stockRepo = ds.getRepository(StockProducto);
+  const stockGuardado: StockProducto[] = [];
+
+  for (const [index, producto] of productosGuardados.entries()) {
+    stockGuardado.push(
+      await stockRepo.save(
+        stockRepo.create({
+          productoId: producto.id,
+          productor: producto.productor,
+          cantidadDisponible: 40 + index * 5,
+          cantidadReservada: 0,
+        })
+      )
+    );
+  }
+  logger.info(`  ✔ ${stockGuardado.length} registros de stock creados.`);
 
   // Helpers de búsqueda por SKU para armar las composiciones
   const bySkuMap = new Map(productosGuardados.map((p) => [p.sku!, p]));
@@ -314,6 +368,7 @@ async function seed(): Promise<void> {
       'Selección de tres vinos premium de Mendoza: un Malbec de guarda, un Gran Corte y un Torrontés refrescante para abrir la noche.',
     precioBase: 14500,
     disponible: true,
+    tenantId: demoTenant.id,
   });
   const cajaVinosSaved = await cajaRepo.save(cajaVinos);
   cajasGuardadas.push(cajaVinosSaved);
@@ -352,6 +407,7 @@ async function seed(): Promise<void> {
       'Viaje por los mejores orígenes del mundo: desde la floral Geisha de Panamá hasta el robusto Espresso brasileño, más un blend signature.',
     precioBase: 6500,
     disponible: true,
+    tenantId: demoTenant.id,
   });
   const cajaCafesSaved = await cajaRepo.save(cajaCafes);
   cajasGuardadas.push(cajaCafesSaved);
@@ -390,6 +446,7 @@ async function seed(): Promise<void> {
       'Tres estilos clásicos de la cerveza artesanal argentina: la explosiva IPA lupulada, la compleja Stout imperial y la refrescante Wheat Ale.',
     precioBase: 4800,
     disponible: true,
+    tenantId: demoTenant.id,
   });
   const cajaCervezasSaved = await cajaRepo.save(cajaCervezas);
   cajasGuardadas.push(cajaCervezasSaved);
@@ -426,7 +483,7 @@ async function seed(): Promise<void> {
   const suscriptoresGuardados: Suscriptor[] = [];
 
   for (const data of suscriptoresData) {
-    const suscriptor = suscriptorRepo.create(data);
+    const suscriptor = suscriptorRepo.create({ ...data, tenantId: demoTenant.id });
     suscriptoresGuardados.push(await suscriptorRepo.save(suscriptor));
   }
   logger.info(`  ✔ ${suscriptoresGuardados.length} suscriptores creados.`);
@@ -485,7 +542,7 @@ async function seed(): Promise<void> {
 
   const suscripcionesGuardadas: Suscripcion[] = [];
   for (const data of suscripcionesData) {
-    const suscripcion = suscripcionRepo.create(data);
+    const suscripcion = suscripcionRepo.create({ ...data, tenantId: demoTenant.id });
     suscripcionesGuardadas.push(await suscripcionRepo.save(suscripcion));
   }
   logger.info(`  ✔ ${suscripcionesGuardadas.length} suscripciones creadas.`);
@@ -494,11 +551,14 @@ async function seed(): Promise<void> {
   logger.info('');
   logger.info('=== Seed completado exitosamente ===');
   logger.info(`  Productos:     ${productosGuardados.length}`);
+  logger.info(`  Stock:         ${stockGuardado.length}`);
   logger.info(`  Cajas:         ${cajasGuardadas.length}`);
   logger.info(`  Suscriptores:  ${suscriptoresGuardados.length}`);
   logger.info(`  Suscripciones: ${suscripcionesGuardadas.length}`);
+  logger.info(`  Tenant demo:   ${demoTenant.nombre} (${demoTenant.slug})`);
+  logger.info(`  Login admin:   admin@clubcurator.demo / ${demoAdminPassword}`);
 
-  await database.disconnectDB();
+  await AppDataSource.destroy();
 }
 
 // ─── Entry point ──────────────────────────────────────────────────────────────

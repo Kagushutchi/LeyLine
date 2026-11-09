@@ -43,6 +43,11 @@ export interface LoginPayload {
   password: string;
 }
 
+/**
+ * Store de autenticación y multi-tenancy. Persiste la sesión en localStorage
+ * para que el cliente HTTP (ver common/api/http-client.ts) pueda adjuntar el
+ * token sin depender de que Pinia ya esté inicializado.
+ */
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<UserInfo | null>(null);
   const accessToken = ref<string | null>(null);
@@ -100,7 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
-  // Hidratar inmediatamente al inicializar el store
+  // Hidratar inmediatamente al inicializar el store.
   initAuth();
 
   const login = async (payload: LoginPayload) => {
@@ -111,7 +116,7 @@ export const useAuthStore = defineStore('auth', () => {
       const response: any = await apiClient.post('/auth/login', payload);
       setAuthData(response.data);
       toast.success(
-        `Bienvenido, ${displayName.value} (${isAdmin.value ? 'Admin de Bodega' : 'Subscriptor'})`,
+        `Bienvenido, ${displayName.value} (${isAdmin.value ? 'Admin' : 'Subscriptor'})`,
         'Acceso concedido'
       );
       return response.data;
@@ -154,10 +159,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response: any = await apiClient.post('/auth/register-subscriptor', payload);
       setAuthData(response.data);
-      toast.success(
-        `Membresía registrada con éxito. ¡Bienvenido, ${payload.nombre}!`,
-        'Registro exitoso'
-      );
+      toast.success(`Membresía registrada con éxito. ¡Bienvenido, ${payload.nombre}!`, 'Registro exitoso');
       return response.data;
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Error al registrar subscriptor';
@@ -188,7 +190,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
       localStorage.setItem('cc_access_token', newTokens.accessToken);
       return newTokens.accessToken;
-    } catch (err) {
+    } catch {
       clearAuthData();
       return null;
     }
@@ -200,7 +202,7 @@ export const useAuthStore = defineStore('auth', () => {
         await apiClient.post('/auth/logout');
       }
     } catch {
-      // Ignoramos error en logout
+      // Ignoramos error en logout: igual limpiamos la sesión local.
     } finally {
       clearAuthData();
       const toast = useToastStore();
@@ -227,4 +229,3 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
   };
 });
-

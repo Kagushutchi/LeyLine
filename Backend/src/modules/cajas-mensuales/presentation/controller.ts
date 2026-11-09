@@ -7,9 +7,9 @@ import UpdateCajaMensual from '../domain/useCase/update-caja-mensual';
 import DeleteCajaMensual from '../domain/useCase/delete-caja-mensual';
 
 export default class CajasMensualesController {
-  async getCajasMensuales(tenantId?: string): Promise<any[]> {
+  async getCajasMensuales(): Promise<any[]> {
     const useCase = new GetCajasMensuales();
-    return await useCase.execute(tenantId);
+    return await useCase.execute();
   }
 
   async getCajaMensualById(id: string | number): Promise<any> {
@@ -23,9 +23,8 @@ export default class CajasMensualesController {
   }
 
   async createCajaMensual(payload: any, tenantId?: string): Promise<any> {
-    if (tenantId) payload.tenantId = tenantId;
     const useCase = new CreateCajaMensual();
-    return await useCase.execute(payload);
+    return await useCase.execute(payload, tenantId);
   }
 
   async recommendCajaMensual(suscriptorId: string, preferencias?: any): Promise<any> {
@@ -33,13 +32,13 @@ export default class CajasMensualesController {
     return await useCase.execute(suscriptorId, preferencias);
   }
 
-  async updateCajaMensual(id: string | number, payload: any): Promise<any> {
+  async updateCajaMensual(id: string | number, payload: any, tenantId?: string): Promise<any> {
     const useCase = new UpdateCajaMensual();
-    return await useCase.execute(id, payload);
+    return await useCase.execute(id, payload, tenantId);
   }
 
-  async deleteCajaMensual(id: string | number): Promise<any> {
+  async deleteCajaMensual(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new DeleteCajaMensual();
-    return await useCase.execute(id);
+    return await useCase.execute(id, tenantId);
   }
 }

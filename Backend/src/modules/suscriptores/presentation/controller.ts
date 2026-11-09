@@ -15,18 +15,21 @@ export default class SuscriptoresController {
     return await useCase.execute(id, tenantId);
   }
 
-  async createSuscriptor(payload: any, tenantId?: string): Promise<any> {
-    const useCase = new CreateSuscriptor();
-    return await useCase.execute(payload, tenantId);
-  }
+    async createSuscriptor(payload: any, tenantId?: string): Promise<any>
+    {
+        const useCase = new CreateSuscriptor();
+        return await useCase.execute(payload, tenantId);
+    }
 
-  async updateSuscriptor(id: string | number, payload: any, tenantId?: string): Promise<any> {
-    const useCase = new UpdateSuscriptor();
-    return await useCase.execute(id, payload, tenantId);
-  }
+    async updateSuscriptor(id: string | number, payload: any, tenantId?: string): Promise<any>
+    {
+        const useCase = new UpdateSuscriptor();
+        return await useCase.execute(id, payload, tenantId);
+    }
 
-  async deleteSuscriptor(id: string | number, tenantId?: string): Promise<any> {
-    const useCase = new DeleteSuscriptor();
-    return await useCase.execute(id, tenantId);
-  }
+    async deleteSuscriptor(id: string | number, tenantId?: string): Promise<any>
+    {
+        const useCase = new DeleteSuscriptor();
+        return await useCase.execute(id, tenantId);
+    }
 }

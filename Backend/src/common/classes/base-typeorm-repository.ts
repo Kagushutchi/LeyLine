@@ -1,5 +1,6 @@
 import { FindOptionsWhere, IsNull, ObjectLiteral, Repository } from "typeorm";
 import { IBaseRepository } from "../interfaces/base-repository.interface";
+import { AppError } from "../errors/app-error";
 
 abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T> {
     protected constructor(private readonly repository: Repository<T>) { }
@@ -16,17 +17,17 @@ abstract class BaseTypeORM<T extends ObjectLiteral> implements IBaseRepository<T
         const el = await this.findOneById(id);
 
         if (!el) {
-            throw "El registro a eliminar no existe";
+            throw new AppError(`El registro con ID ${id} a eliminar no existe`, 404);
         }
 
         await this.repository.softRemove(el);
         return el;
     }
 
-    async update(id: string | number, entity: any): Promise<any> {
+    async update(id: string | number, entity: Partial<T>): Promise<T | null> {
         const el = await this.findOneById(id);
         if (!el) {
-            throw "El registro a actualizar no existe";
+            throw new AppError(`El registro con ID ${id} a actualizar no existe`, 404);
         }
         const { id: _id, deletedAt: _deletedAt, ...changes } = entity;
         Object.assign(el, changes);

@@ -1,6 +1,7 @@
 import { CajaMensual } from "../../infrastructure/caja-mensual.entity";
 import { CajaMensualRepository } from "../../infrastructure/caja-mensual-repository";
 import { AppError } from "../../../../common/errors/app-error";
+import { assertTenantOwnership } from "../../../../common/utils/tenant-ownership";
 import { CajaMensualProducto } from '../../infrastructure/caja-mensual-producto.entity';
 import { ProductoRepository } from '../../../productos/infrastructure/producto-repository';
 
@@ -18,11 +19,12 @@ export default class UpdateCajaMensual {
     this.repository = new CajaMensualRepository();
   }
 
-  async execute(id: string | number, payload: Partial<CajaMensual> & { composiciones?: ComposicionPayload[] }): Promise<CajaMensual> {
+  async execute(id: string | number, payload: Partial<CajaMensual> & { composiciones?: ComposicionPayload[] }, tenantId?: string): Promise<CajaMensual> {
     const existing = await this.repository.findOneById(id);
     if (!existing) {
       throw new AppError(`Caja mensual con ID ${id} no encontrada`, 404);
     }
+    assertTenantOwnership(existing.tenantId, tenantId);
 
     const { id: _id, composiciones, deletedAt: _deletedAt, ...cajaPayload } = payload;
     Object.assign(existing, cajaPayload);

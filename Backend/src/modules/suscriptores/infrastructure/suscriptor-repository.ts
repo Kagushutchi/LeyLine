@@ -1,15 +1,15 @@
-import { dataSource } from '../../../app';
+import { getDataSource } from '../../../config/database.config';
 import BaseTypeORM from '../../../common/classes/base-typeorm-repository';
 import { Suscriptor } from './suscriptor.entity';
 import { IsNull } from 'typeorm';
 
 export class SuscriptorRepository extends BaseTypeORM<Suscriptor> {
   constructor() {
-    super(dataSource.getRepository(Suscriptor));
+    super(getDataSource().getRepository(Suscriptor));
   }
 
   async findAll(tenantId?: string): Promise<Suscriptor[]> {
-    const repo = dataSource.getRepository(Suscriptor);
+    const repo = getDataSource().getRepository(Suscriptor);
     if (tenantId) {
       return await repo.find({
         where: {
@@ -32,7 +32,7 @@ export class SuscriptorRepository extends BaseTypeORM<Suscriptor> {
   }
 
   async findOneById(id: string | number, tenantId?: string): Promise<Suscriptor | null> {
-    const repo = dataSource.getRepository(Suscriptor);
+    const repo = getDataSource().getRepository(Suscriptor);
     if (tenantId) {
       return await repo.findOne({
         where: {

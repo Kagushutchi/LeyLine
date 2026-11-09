@@ -1,10 +1,12 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { authMiddleware } from "../../../common/middlewares/auth.middleware";
 import { AppError } from "../../../common/errors/app-error";
-import { dataSource } from "../../../app";
+import { getDataSource } from "../../../config/database.config";
 import { User } from "../../auth/infrastructure/user.entity";
 import { CajaMensualRepository } from "../../cajas-mensuales/infrastructure/caja-mensual-repository";
 import SuscripcionesController from "./controller";
+import { validateBody, validateParams } from "../../../common/middlewares/validation.middleware";
+import { updateSuscripcionSchema, suscripcionIdParamSchema, suscriptorIdParamSchema } from "./suscripcion.schema";
 
 /**
  * Rutas heredadas (síncronas). Todas exigen autenticación y quedan aisladas por
@@ -27,7 +29,7 @@ class SuscripcionesRouter {
 
   /** Suscriptor vinculado al usuario autenticado (nunca inferido por email). */
   private async linkedSuscriptorId(req: Request): Promise<string> {
-    const user = await dataSource.getRepository(User).findOneBy({ id: req.user!.userId });
+    const user = await getDataSource().getRepository(User).findOneBy({ id: req.user!.userId });
     if (!user || !user.activo || !user.suscriptorId) {
       throw new AppError('No existe un suscriptor vinculado', 403);
     }
@@ -38,6 +40,11 @@ class SuscripcionesRouter {
     const tenantId = req.user!.tenantId;
     if (!tenantId) throw new AppError('Usuario sin tenant asignado', 403);
     return tenantId;
+  }
+
+  /** Tenant passed to the use cases (assertTenantOwnership) when the caller is an admin. */
+  private tenantOf(req: Request): string | undefined {
+    return req.user!.role === 'admin' ? this.adminTenant(req) : undefined;
   }
 
   private requireAdmin(req: Request): string {
@@ -87,10 +94,10 @@ class SuscripcionesRouter {
       const result = await this.controller.getSuscripcionesBySuscriptor(requested);
       res.status(200).json({ status: 'success', data: result });
     });
-    router.get(`${this.BASE_URL}cliente/:suscriptorId`, bySuscriptor);
-    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, bySuscriptor);
+    router.get(`${this.BASE_URL}cliente/:suscriptorId`, validateParams(suscriptorIdParamSchema), bySuscriptor);
+    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, validateParams(suscriptorIdParamSchema), bySuscriptor);
 
-    router.get(`${this.BASE_URL}:id`, wrap(async (req, res) => {
+    router.get(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), wrap(async (req, res) => {
       const result = await this.authorizedSuscripcion(req, req.params.id, true);
       res.status(200).json({ status: 'success', data: result });
     }));
@@ -120,28 +127,28 @@ class SuscripcionesRouter {
 
     const pause = wrap(async (req, res) => {
       await this.authorizedSuscripcion(req, req.params.id, true);
-      res.status(200).json({ status: 'success', data: await this.controller.pauseSuscripcion(req.params.id) });
+      res.status(200).json({ status: 'success', data: await this.controller.pauseSuscripcion(req.params.id, this.tenantOf(req)) });
     });
     const cancel = wrap(async (req, res) => {
       await this.authorizedSuscripcion(req, req.params.id, true);
-      res.status(200).json({ status: 'success', data: await this.controller.cancelSuscripcion(req.params.id) });
+      res.status(200).json({ status: 'success', data: await this.controller.cancelSuscripcion(req.params.id, this.tenantOf(req)) });
     });
-    router.put(`${this.BASE_URL}:id/pausar`, pause);
-    router.patch(`${this.BASE_URL}:id/pausar`, pause);
-    router.put(`${this.BASE_URL}:id/cancelar`, cancel);
-    router.patch(`${this.BASE_URL}:id/cancelar`, cancel);
+    router.put(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), pause);
+    router.patch(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), pause);
+    router.put(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), cancel);
+    router.patch(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), cancel);
 
-    router.put(`${this.BASE_URL}:id`, wrap(async (req, res) => {
+    router.put(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), validateBody(updateSuscripcionSchema), wrap(async (req, res) => {
       this.requireAdmin(req);
       await this.authorizedSuscripcion(req, req.params.id, false);
       const { tenantId: _t, suscriptorId: _s, ...changes } = req.body ?? {};
-      res.status(200).json({ status: 'success', data: await this.controller.updateSuscripcion(req.params.id, changes) });
+      res.status(200).json({ status: 'success', data: await this.controller.updateSuscripcion(req.params.id, changes, this.tenantOf(req)) });
     }));
 
-    router.delete(`${this.BASE_URL}:id`, wrap(async (req, res) => {
+    router.delete(`${this.BASE_URL}:id`, validateParams(suscripcionIdParamSchema), wrap(async (req, res) => {
       this.requireAdmin(req);
       await this.authorizedSuscripcion(req, req.params.id, false);
-      res.status(200).json({ status: 'success', data: await this.controller.deleteSuscripcion(req.params.id) });
+      res.status(200).json({ status: 'success', data: await this.controller.deleteSuscripcion(req.params.id, this.tenantOf(req)) });
     }));
 
     return router;

@@ -1,8 +1,16 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { authMiddleware, optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
+import CajasMensualesController from "./controller";
+import { validateBody, validateParams } from "../../../common/middlewares/validation.middleware";
+import {
+  createCajaMensualSchema,
+  updateCajaMensualSchema,
+  recommendCajaMensualSchema,
+  cajaMensualIdParamSchema,
+  periodoParamSchema,
+} from "./caja-mensual.schema";
+import { authMiddleware } from "../../../common/middlewares/auth.middleware";
 import { requireRole } from "../../../common/middlewares/roles.middleware";
 import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
-import CajasMensualesController from "./controller";
 
 class CajasMensualesRouter {
   private router: Router;
@@ -21,16 +29,17 @@ class CajasMensualesRouter {
   public createRouter(): Router {
     const router = Router();
 
-    router.get(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
+    // Catálogo: lectura pública.
+    router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
       try {
-        const result = await this.controller.getCajasMensuales(req.tenantId);
+        const result = await this.controller.getCajasMensuales();
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.get(`${this.BASE_URL}periodo/:anio/:mes`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}periodo/:anio/:mes`, validateParams(periodoParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const anio = parseInt(req.params.anio, 10);
         const mes = parseInt(req.params.mes, 10);
@@ -41,7 +50,7 @@ class CajasMensualesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.getCajaMensualById(id);
@@ -51,11 +60,13 @@ class CajasMensualesRouter {
       }
     });
 
+    // Escritura: sólo administradores autenticados, acotados a su propio tenant.
     router.post(
       this.BASE_URL,
       authMiddleware,
       requireRole(['admin']),
       tenantScopeMiddleware,
+      validateBody(createCajaMensualSchema),
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const result = await this.controller.createCajaMensual(req.body, req.tenantId);
@@ -66,7 +77,7 @@ class CajasMensualesRouter {
       }
     );
 
-    router.post(`${this.BASE_URL}recomendar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.post(`${this.BASE_URL}recomendar`, validateBody(recommendCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { suscriptorId, preferencias } = req.body;
         const result = await this.controller.recommendCajaMensual(suscriptorId, preferencias);
@@ -81,10 +92,12 @@ class CajasMensualesRouter {
       authMiddleware,
       requireRole(['admin']),
       tenantScopeMiddleware,
+      validateParams(cajaMensualIdParamSchema),
+      validateBody(updateCajaMensualSchema),
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { id } = req.params;
-          const result = await this.controller.updateCajaMensual(id, req.body);
+          const result = await this.controller.updateCajaMensual(id, req.body, req.tenantId);
           res.status(200).json({ status: 'success', data: result });
         } catch (error) {
           next(error);
@@ -97,10 +110,11 @@ class CajasMensualesRouter {
       authMiddleware,
       requireRole(['admin']),
       tenantScopeMiddleware,
+      validateParams(cajaMensualIdParamSchema),
       async (req: Request, res: Response, next: NextFunction) => {
         try {
           const { id } = req.params;
-          const result = await this.controller.deleteCajaMensual(id);
+          const result = await this.controller.deleteCajaMensual(id, req.tenantId);
           res.status(200).json({ status: 'success', data: result });
         } catch (error) {
           next(error);

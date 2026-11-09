@@ -7,7 +7,7 @@
         <p class="auth-subtitle">Acceso exclusivo a la plataforma ClubCurator</p>
       </div>
 
-      <form @submit.prevent="handleSubmit" class="auth-form">
+      <form class="auth-form" @submit.prevent="handleSubmit">
         <div class="form-group">
           <label for="identifier" class="form-label">Usuario o Correo Electrónico</label>
           <input
@@ -44,25 +44,17 @@
         </button>
       </form>
 
-      <!-- Accesos Rápidos de Demostración -->
+      <!-- Acceso Rápido de Demostración (admin sembrado por el seed script) -->
       <div class="demo-section">
-        <span class="demo-title">Accesos Rápidos Demo:</span>
+        <span class="demo-title">Acceso Rápido Demo:</span>
         <div class="demo-buttons">
           <button
             type="button"
             class="btn btn-secondary btn-sm"
-            @click="fillDemo('admin')"
             :disabled="authStore.loading"
+            @click="fillDemo"
           >
-            Admin Bodega (admin)
-          </button>
-          <button
-            type="button"
-            class="btn btn-secondary btn-sm"
-            @click="fillDemo('subscriptor')"
-            :disabled="authStore.loading"
-          >
-            Subscriptor (valentina)
+            Admin de Demo (ClubCurator Demo)
           </button>
         </div>
       </div>
@@ -89,14 +81,10 @@ const form = reactive({
   password: '',
 });
 
-const fillDemo = (type: 'admin' | 'subscriptor') => {
-  if (type === 'admin') {
-    form.identifier = 'admin';
-    form.password = 'password123';
-  } else {
-    form.identifier = 'valentina';
-    form.password = 'password123';
-  }
+const fillDemo = () => {
+  // Credenciales creadas por Backend/src/seeds/seed.ts.
+  form.identifier = 'admin@clubcurator.demo';
+  form.password = 'Password123';
 };
 
 const handleSubmit = async () => {

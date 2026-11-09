@@ -1,4 +1,5 @@
-import { MigrationInterface, QueryRunner, TableColumn, TableForeignKey, TableUnique } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { TableColumn, TableForeignKey, TableUnique } from 'typeorm';
 
 export class LinkUsersToSuscriptores1796000000000 implements MigrationInterface {
   public async up(queryRunner: QueryRunner): Promise<void> {

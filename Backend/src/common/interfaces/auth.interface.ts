@@ -11,6 +11,9 @@ export interface JwtPayload {
 }
 
 declare global {
+  // Augmentación del tipo Request de Express: es la forma idiomática de TypeORM/Express
+  // para extender tipos de terceros, de ahí la excepción puntual a la regla de ESLint.
+  // eslint-disable-next-line @typescript-eslint/no-namespace
   namespace Express {
     interface Request {
       user?: JwtPayload;

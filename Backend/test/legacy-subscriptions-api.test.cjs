@@ -3,7 +3,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DataSource } = require('typeorm');
 const { entities } = require('../dist/common/patterns/factory/entities');
-const app = require('../dist/app');
+const { setActiveDataSource } = require('../dist/config/database.config');
 const { User } = require('../dist/modules/auth/infrastructure/user.entity');
 const { Suscriptor } = require('../dist/modules/suscriptores/infrastructure/suscriptor.entity');
 const { CajaMensual } = require('../dist/modules/cajas-mensuales/infrastructure/caja-mensual.entity');
@@ -15,8 +15,8 @@ const router = require('../dist/modules/suscripciones/presentation/suscripciones
 async function setup(t) {
   const db = new DataSource({ type: 'sqlite', database: ':memory:', entities, synchronize: true });
   await db.initialize();
-  app.dataSource = db;
-  t.after(async () => { await db.destroy(); });
+  setActiveDataSource(db);
+  t.after(async () => { setActiveDataSource(null); await db.destroy(); });
   const t1 = await db.getRepository(Tenant).save({ nombre: 'T1', slug: 't1' });
   const t2 = await db.getRepository(Tenant).save({ nombre: 'T2', slug: 't2' });
   const subs = db.getRepository(Suscriptor);
@@ -40,7 +40,10 @@ async function setup(t) {
     try {
       layers.find((l) => !l.route).handle(req, res, (e) => { if (e) throw e; });
       if (!route) return resolve({ status: 404 });
-      route.route.stack[0].handle(req, res, fail);
+      // Run the route's whole middleware chain (validators first, handler last).
+      const chain = route.route.stack.map((l) => l.handle);
+      const step = (i) => (e) => { if (e) return fail(e); if (i < chain.length) { try { chain[i](req, res, step(i + 1)); } catch (x) { fail(x); } } };
+      step(0)();
     } catch (e) { fail(e); }
   });
   function matches(layer, path, req) {

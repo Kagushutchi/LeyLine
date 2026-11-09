@@ -14,7 +14,7 @@ export class Suscripcion {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'uuid' })
   suscriptorId: string;
 
   @ManyToOne(() => Suscriptor, { onDelete: 'CASCADE' })
@@ -24,7 +24,7 @@ export class Suscripcion {
   @Column({ type: 'uuid' })
   cajaMensualId: string;
 
-  @ManyToOne(() => CajaMensual, { onDelete: 'SET NULL' })
+  @ManyToOne(() => CajaMensual, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'cajaMensualId' })
   cajaMensual: CajaMensual;
 
@@ -47,6 +47,10 @@ export class Suscripcion {
   @Column({ type: 'date', nullable: true })
   proximoCobro: Date;
 
+  /**
+   * Bodega/tostadero que gestiona esta suscripción (multi-tenancy).
+   * Nullable: compatibilidad con suscripciones creadas antes de la multi-tenancy.
+   */
   @Column({ type: 'uuid', nullable: true })
   tenantId?: string;
 

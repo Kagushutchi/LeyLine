@@ -1,10 +1,10 @@
 import { DataSource } from 'typeorm';
-import { dataSource } from '../../../app';
+import { getDataSource } from '../../../config/database.config';
 import BaseTypeORM from '../../../common/classes/base-typeorm-repository';
 import { Suscripcion } from './suscripcion.entity';
 
 export class SuscripcionRepository extends BaseTypeORM<Suscripcion> {
-  constructor(private readonly db: DataSource = dataSource) {
+  constructor(private readonly db: DataSource = getDataSource()) {
     super(db.getRepository(Suscripcion));
   }
 

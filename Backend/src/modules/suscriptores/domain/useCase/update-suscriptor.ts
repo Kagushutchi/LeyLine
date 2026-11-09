@@ -1,6 +1,7 @@
 import { Suscriptor } from "../../infrastructure/suscriptor.entity";
 import { SuscriptorRepository } from "../../infrastructure/suscriptor-repository";
 import { AppError } from "../../../../common/errors/app-error";
+import { assertTenantOwnership } from "../../../../common/utils/tenant-ownership";
 
 export default class UpdateSuscriptor
 {
@@ -18,6 +19,8 @@ export default class UpdateSuscriptor
         {
             throw new AppError('Cliente no encontrado', 404);
         }
+
+        assertTenantOwnership(current.tenantId, tenantId);
 
         if (payload.nombre !== undefined && !payload.nombre.trim())
         {

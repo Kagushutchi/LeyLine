@@ -1,5 +1,6 @@
 import { SuscriptorRepository } from "../../infrastructure/suscriptor-repository";
 import { AppError } from "../../../../common/errors/app-error";
+import { assertTenantOwnership } from "../../../../common/utils/tenant-ownership";
 
 export default class DeleteSuscriptor
 {
@@ -17,6 +18,8 @@ export default class DeleteSuscriptor
         {
             throw new AppError('Cliente no encontrado', 404);
         }
+
+        assertTenantOwnership(current.tenantId, tenantId);
 
         const result = await this.repository.delete(id);
         return { success: result, id };

@@ -1,4 +1,5 @@
-import { MigrationInterface, QueryRunner, Table, TableIndex } from 'typeorm';
+import type { MigrationInterface, QueryRunner } from 'typeorm';
+import { Table, TableIndex } from 'typeorm';
 
 export class AddSubscriptionRequests1797000000000 implements MigrationInterface {
   async up(queryRunner: QueryRunner): Promise<void> {

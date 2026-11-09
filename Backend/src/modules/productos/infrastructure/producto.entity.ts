@@ -44,6 +44,10 @@ export class Producto {
   @Column({ type: 'boolean', default: true })
   activo: boolean;
 
+  /**
+   * Bodega/tostadero propietario del producto (multi-tenancy).
+   * Nullable: un producto sin tenant se considera del catálogo compartido/global.
+   */
   @Column({ type: 'uuid', nullable: true })
   tenantId?: string;
 
