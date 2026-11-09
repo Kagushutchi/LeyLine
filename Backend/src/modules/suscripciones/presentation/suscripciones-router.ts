@@ -1,4 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
+import { SuscriptorRepository } from "../../suscriptores/infrastructure/suscriptor-repository";
 import SuscripcionesController from "./controller";
 
 class SuscripcionesRouter {
@@ -18,9 +20,23 @@ class SuscripcionesRouter {
   public createRouter(): Router {
     const router = Router();
 
-    router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
+    router.get(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const result = await this.controller.getSuscripciones();
+        let tenantId: string | undefined = undefined;
+        let suscriptorId: string | undefined = undefined;
+
+        if (req.user) {
+          if (req.user.role === 'admin') {
+            tenantId = req.tenantId || req.user.tenantId;
+          } else if (req.user.role === 'subscriptor') {
+            const suscriptorRepo = new SuscriptorRepository();
+            const all = await suscriptorRepo.findAll();
+            const matching = all.find((s) => s.email?.toLowerCase() === req.user?.email?.toLowerCase());
+            suscriptorId = matching ? matching.id : req.user.userId;
+          }
+        }
+
+        const result = await this.controller.getSuscripciones(tenantId, suscriptorId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
@@ -46,26 +62,46 @@ class SuscripcionesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}:id`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.getSuscripcionById(id);
+        const tenantId = req.user?.role === 'admin' ? (req.tenantId || req.user.tenantId) : undefined;
+        const result = await this.controller.getSuscripcionById(id, tenantId);
+        if (!result) {
+          return res.status(404).json({ status: 'error', message: 'Suscripción no encontrada' });
+        }
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.post(this.BASE_URL, async (req: Request, res: Response, next: NextFunction) => {
+    router.post(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const result = await this.controller.createSuscripcion(req.body);
+        let tenantId = req.body.tenantId;
+
+        if (req.user) {
+          if (req.user.role === 'admin' && req.user.tenantId) {
+            tenantId = req.user.tenantId;
+            req.body.tenantId = tenantId;
+          } else if (req.user.role === 'subscriptor') {
+            const suscriptorRepo = new SuscriptorRepository();
+            const all = await suscriptorRepo.findAll();
+            const matching = all.find((s) => s.email?.toLowerCase() === req.user?.email?.toLowerCase());
+            if (matching) {
+              req.body.suscriptorId = matching.id;
+            }
+          }
+        }
+
+        const result = await this.controller.createSuscripcion(req.body, tenantId);
         res.status(201).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
 
-    router.put(`${this.BASE_URL}:id/pausar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id/pausar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.pauseSuscripcion(id);
@@ -75,7 +111,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.patch(`${this.BASE_URL}:id/pausar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.patch(`${this.BASE_URL}:id/pausar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.pauseSuscripcion(id);
@@ -85,7 +121,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id/cancelar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id/cancelar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.cancelSuscripcion(id);
@@ -95,7 +131,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.patch(`${this.BASE_URL}:id/cancelar`, async (req: Request, res: Response, next: NextFunction) => {
+    router.patch(`${this.BASE_URL}:id/cancelar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.cancelSuscripcion(id);
@@ -105,7 +141,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.put(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.put(`${this.BASE_URL}:id`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.updateSuscripcion(id, req.body);
@@ -115,7 +151,7 @@ class SuscripcionesRouter {
       }
     });
 
-    router.delete(`${this.BASE_URL}:id`, async (req: Request, res: Response, next: NextFunction) => {
+    router.delete(`${this.BASE_URL}:id`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
         const result = await this.controller.deleteSuscripcion(id);

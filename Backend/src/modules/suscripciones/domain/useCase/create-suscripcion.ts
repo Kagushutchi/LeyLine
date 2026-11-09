@@ -43,6 +43,7 @@ export default class CreateSuscripcion {
     suscripcion.estado = estado;
     suscripcion.fechaInicio = payload.fechaInicio ? new Date(payload.fechaInicio) : new Date();
     suscripcion.proximoCobro = payload.proximoCobro ? new Date(payload.proximoCobro) : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+    suscripcion.tenantId = payload.tenantId || cajaMensual.tenantId;
 
     return await this.repository.save(suscripcion);
   }

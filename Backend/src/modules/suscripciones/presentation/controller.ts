@@ -8,14 +8,18 @@ import CancelSuscripcion from '../domain/useCase/cancel-suscripcion';
 import DeleteSuscripcion from '../domain/useCase/delete-suscripcion';
 
 export default class SuscripcionesController {
-  async getSuscripciones(): Promise<any[]> {
+  async getSuscripciones(tenantId?: string, suscriptorId?: string): Promise<any[]> {
     const useCase = new GetSuscripciones();
-    return await useCase.execute();
+    return await useCase.execute(tenantId, suscriptorId);
   }
 
-  async getSuscripcionById(id: string | number): Promise<any> {
+  async getSuscripcionById(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new GetSuscripcionById();
-    return await useCase.execute(id);
+    const suscripcion = await useCase.execute(id);
+    if (suscripcion && tenantId && suscripcion.tenantId && suscripcion.tenantId !== tenantId) {
+      return null;
+    }
+    return suscripcion;
   }
 
   async getSuscripcionesBySuscriptor(suscriptorId: string): Promise<any[]> {
@@ -23,7 +27,10 @@ export default class SuscripcionesController {
     return await useCase.execute(suscriptorId);
   }
 
-  async createSuscripcion(payload: any): Promise<any> {
+  async createSuscripcion(payload: any, tenantId?: string): Promise<any> {
+    if (tenantId && !payload.tenantId) {
+      payload.tenantId = tenantId;
+    }
     const useCase = new CreateSuscripcion();
     return await useCase.execute(payload);
   }

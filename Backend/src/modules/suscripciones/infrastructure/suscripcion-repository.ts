@@ -19,12 +19,23 @@ export class SuscripcionRepository extends BaseTypeORM<Suscripcion> {
       .where('suscripcion.deletedAt IS NULL');
   }
 
-  public async findAll(): Promise<Suscripcion[]> {
-    return this.activeWithHistory().orderBy('suscripcion.createdAt', 'DESC').getMany();
+  public async findAll(tenantId?: string, suscriptorId?: string): Promise<Suscripcion[]> {
+    const qb = this.activeWithHistory();
+    if (tenantId) {
+      qb.andWhere('suscripcion.tenantId = :tenantId', { tenantId });
+    }
+    if (suscriptorId) {
+      qb.andWhere('suscripcion.suscriptorId = :suscriptorId', { suscriptorId });
+    }
+    return qb.orderBy('suscripcion.createdAt', 'DESC').getMany();
   }
 
-  public async findOneById(id: string | number): Promise<Suscripcion | null> {
-    return this.activeWithHistory().andWhere('suscripcion.id = :id', { id: String(id) }).getOne();
+  public async findOneById(id: string | number, tenantId?: string): Promise<Suscripcion | null> {
+    const qb = this.activeWithHistory().andWhere('suscripcion.id = :id', { id: String(id) });
+    if (tenantId) {
+      qb.andWhere('suscripcion.tenantId = :tenantId', { tenantId });
+    }
+    return qb.getOne();
   }
 
   public async findBySuscriptorId(suscriptorId: string): Promise<Suscripcion[]> {

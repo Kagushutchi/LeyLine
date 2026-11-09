@@ -48,7 +48,7 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
     }
 
     // 3. Añadir tenantId a entidades de dominio
-    const domainTables = ['productos', 'cajas_mensuales', 'suscripciones'];
+    const domainTables = ['productos', 'cajas_mensuales', 'suscripciones', 'suscriptores'];
     for (const table of domainTables) {
       if (await queryRunner.hasTable(table)) {
         const hasTenantCol = await queryRunner.hasColumn(table, 'tenantId');

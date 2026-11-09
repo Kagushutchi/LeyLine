@@ -8,7 +8,7 @@ export default class GetSuscripciones {
     this.repository = new SuscripcionRepository();
   }
 
-  async execute(): Promise<Suscripcion[]> {
-    return await this.repository.findAll();
+  async execute(tenantId?: string, suscriptorId?: string): Promise<Suscripcion[]> {
+    return await this.repository.findAll(tenantId, suscriptorId);
   }
 }

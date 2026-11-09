@@ -88,10 +88,11 @@ CREATE TABLE IF NOT EXISTS users (
 );
 ```
 
-### Relación con Entidades de Negocio
+### Relación con Entidades de Negocio y Aislamiento de Suscripciones
 Las tablas `productos`, `cajas_mensuales` y `suscripciones` cuentan con la columna `tenantId`:
-- En consultas de lectura para administradores (`GET /api/productos`, etc.): Si el usuario está autenticado como `admin`, los repositorios filtran automáticamente `WHERE tenantId = :tenantId`.
-- En creaciones (`POST`): El middleware `tenantScopeMiddleware` inyecta automáticamente `req.body.tenantId = req.user.tenantId`, impidiendo la suplantación de inquilino desde el cliente.
+- En consultas de lectura para administradores (`GET /api/productos`, `GET /api/cajas-mensuales`, `GET /api/suscripciones`): Los repositorios filtran estrictamente `WHERE tenantId = :tenantId`. Un nuevo administrador de bodega inicia con 0 suscripciones y jamás puede ver las de otros inquilinos.
+- En consultas de lectura para clientes (`GET /api/suscripciones`): Si el rol es `subscriptor`, el backend filtra automáticamente `WHERE suscriptorId = :suscriptorId`, permitiéndole gestionar únicamente sus membresías propias en `CatalogoView.vue`.
+- En creaciones (`POST`): El middleware y los routers inyectan automáticamente el `tenantId` del administrador o lo heredan de la caja mensual asociada, impidiendo la suplantación o fuga de datos entre bodegas.
 
 ---
 

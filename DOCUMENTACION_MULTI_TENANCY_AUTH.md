@@ -76,10 +76,13 @@ Se ha diseñado e implementado una arquitectura integral de **autenticación mul
 4. **`src/common/patterns/factory/sqlite-typeorm.ts` y `postgres-typeorm.ts`**: Integrada la migración `AddAuthAndMultiTenancy1795000000000` en la lista de migraciones automáticas.
 5. **`src/app.ts`**: Montado el router de autenticación en `/api/auth`.
 6. **`src/server.ts`**: Refactorizado para utilizar la conexión única de base de datos proveniente de `app.ts`.
-7. **Entidades y Repositorios de Dominio (`productos`, `cajas-mensuales`)**:
-   - Agregada columna `tenantId` opcional.
-   - Repositorios actualizados para soportar filtrado por `tenantId`.
-   - Rutas protegidas: las operaciones mutantes (`POST`, `PUT`, `DELETE`) requieren `authMiddleware + requireRole(['admin']) + tenantScopeMiddleware`. Las consultas `GET` admiten `optionalAuthMiddleware` para mantener compatibilidad hacia atrás.
+7. **Entidades y Repositorios de Dominio (`productos`, `cajas-mensuales`, `suscripciones`)**:
+   - Agregada columna `tenantId` en entidades.
+   - **Aislamiento Multi-Tenant Estricto:**
+     - En `SuscripcionRepository`: `findAll(tenantId, suscriptorId)` filtra por `tenantId` para administradores y por `suscriptorId` para clientes.
+     - En `ProductoRepository` y `CajaMensualRepository`: filtrado estricto por `tenantId = :tenantId`.
+     - En `suscripciones-router.ts`: inyección automática de `tenantId` en creaciones y validaciones de pertenencia de inquilino.
+   - Rutas protegidas: las operaciones mutantes (`POST`, `PUT`, `DELETE`) requieren `authMiddleware + requireRole(['admin']) + tenantScopeMiddleware`. Las consultas `GET` admiten `optionalAuthMiddleware` para mantener compatibilidad hacia atrás en tests.
 
 ---
 

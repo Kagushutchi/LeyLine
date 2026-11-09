@@ -19,7 +19,7 @@ export class ProductoRepository extends BaseTypeORM<Producto> {
   async findAll(tenantId?: string): Promise<Producto[]> {
     const qb = this.activeWithHistory();
     if (tenantId) {
-      qb.andWhere('(producto.tenantId = :tenantId OR producto.tenantId IS NULL)', { tenantId });
+      qb.andWhere('producto.tenantId = :tenantId', { tenantId });
     }
     return qb.orderBy('producto.nombre', 'ASC').getMany();
   }
