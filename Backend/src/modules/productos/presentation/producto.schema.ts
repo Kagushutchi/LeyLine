@@ -11,9 +11,10 @@ export const createProductoSchema = z.object({
   sku: z.string().trim().max(100).optional(),
   precioReferencia: z.coerce.number().nonnegative('El precio de referencia no puede ser negativo').optional(),
   activo: z.boolean().optional(),
+  stockInicial: z.coerce.number().int().nonnegative('El stock inicial no puede ser negativo').optional(),
 });
 
-export const updateProductoSchema = createProductoSchema.partial();
+export const updateProductoSchema = createProductoSchema.omit({ stockInicial: true }).partial();
 
 export const productoIdParamSchema = z.object({
   id: z.string().uuid('El ID debe ser un UUID válido'),

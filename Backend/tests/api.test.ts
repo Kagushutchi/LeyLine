@@ -6,6 +6,8 @@ import type { DataSource } from 'typeorm';
 let app: Application;
 let dataSource: DataSource;
 let inventarioProductoId: string;
+let adminToken: string;
+let adminTenantId: string;
 
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
@@ -48,6 +50,16 @@ beforeAll(async () => {
   );
 
   inventarioProductoId = producto.id;
+
+  // Admin de prueba utilizado por las rutas que ahora requieren autenticación.
+  const registered = await request(app).post('/api/auth/register-admin').send({
+    nombreNegocio: 'Bodega de Pruebas',
+    email: `admin-${Date.now()}@leyline.test`,
+    username: `admin-${Date.now()}`,
+    password: 'Password123',
+  });
+  adminToken = registered.body.data.accessToken;
+  adminTenantId = registered.body.data.user.tenantId;
 });
 
 afterAll(async () => {
@@ -67,7 +79,10 @@ describe('API base', () => {
   });
 
   it('rechaza un body inválido con 400', async () => {
-    const response = await request(app).post('/api/suscriptores').send({ nombre: 'Sin email' });
+    const response = await request(app)
+      .post('/api/suscriptores')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ nombre: 'Sin email' });
 
     expect(response.status).toBe(400);
     expect(response.body.status).toBe('error');
@@ -84,6 +99,7 @@ describe('API base', () => {
     const email = `test-${Date.now()}@leyline.test`;
     const created = await request(app)
       .post('/api/suscriptores')
+      .set('Authorization', `Bearer ${adminToken}`)
       .send({ nombre: 'Ada', apellido: 'Lovelace', email });
 
     expect(created.status).toBe(201);
@@ -97,11 +113,105 @@ describe('API base', () => {
 
   it('devuelve 409 ante un email duplicado', async () => {
     const email = `duplicado-${Date.now()}@leyline.test`;
-    await request(app).post('/api/suscriptores').send({ nombre: 'Uno', email });
+    await request(app)
+      .post('/api/suscriptores')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ nombre: 'Uno', email });
 
-    const response = await request(app).post('/api/suscriptores').send({ nombre: 'Dos', email });
+    const response = await request(app)
+      .post('/api/suscriptores')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ nombre: 'Dos', email });
 
     expect(response.status).toBe(409);
+  });
+});
+
+describe('Autenticación y multi-tenancy', () => {
+  it('rechaza crear un producto sin token', async () => {
+    const response = await request(app)
+      .post('/api/productos')
+      .send({ nombre: 'Sin sesión', categoria: 'vinos', tipo: 'Tinto', productor: 'Bodega X' });
+
+    expect(response.status).toBe(401);
+  });
+
+  it('permite el login con las credenciales del admin registrado en el setup', async () => {
+    // No conocemos la contraseña en texto plano aquí (sólo el hash viaja a la DB),
+    // así que registramos un segundo admin completo para probar el login de punta a punta.
+    const email = `login-${Date.now()}@leyline.test`;
+    const password = 'Password123';
+    await request(app).post('/api/auth/register-admin').send({
+      nombreNegocio: 'Otra Bodega',
+      email,
+      username: `login-${Date.now()}`,
+      password,
+    });
+
+    const login = await request(app).post('/api/auth/login').send({ email, password });
+
+    expect(login.status).toBe(200);
+    expect(login.body.data.accessToken).toBeTruthy();
+    expect(login.body.data.user.role).toBe('admin');
+  });
+
+  it('crea un producto autenticado y lo asocia al tenant del admin', async () => {
+    const response = await request(app)
+      .post('/api/productos')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ nombre: 'Malbec de prueba', categoria: 'vinos', tipo: 'Tinto', productor: 'Bodega Test', stockInicial: 5 });
+
+    expect(response.status).toBe(201);
+    expect(response.body.data.tenantId).toBe(adminTenantId);
+  });
+
+  it('impide que el admin de un tenant edite un producto de otro tenant', async () => {
+    const own = await request(app)
+      .post('/api/productos')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ nombre: 'Producto de Bodega A', categoria: 'vinos', tipo: 'Tinto', productor: 'Bodega A' });
+
+    const otroAdmin = await request(app).post('/api/auth/register-admin').send({
+      nombreNegocio: 'Bodega B',
+      email: `otro-${Date.now()}@leyline.test`,
+      username: `otro-${Date.now()}`,
+      password: 'Password123',
+    });
+    const otroToken = otroAdmin.body.data.accessToken;
+
+    const response = await request(app)
+      .put(`/api/productos/${own.body.data.id}`)
+      .set('Authorization', `Bearer ${otroToken}`)
+      .send({ nombre: 'Intento de edición ajena' });
+
+    expect(response.status).toBe(403);
+  });
+
+  it('provisiona inventario automáticamente al crear un producto por API', async () => {
+    const created = await request(app)
+      .post('/api/productos')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ nombre: 'Producto con inventario', categoria: 'cafes', tipo: 'Molido', productor: 'Tostadero Test', stockInicial: 20 });
+
+    expect(created.status).toBe(201);
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:inv="http://leyline.com/soap/inventario">
+  <soap:Body>
+    <inv:consultarInventario>
+      <inv:productoId>${created.body.data.id}</inv:productoId>
+    </inv:consultarInventario>
+  </soap:Body>
+</soap:Envelope>`;
+
+    const response = await request(app)
+      .post('/soap/inventario')
+      .set('Content-Type', 'text/xml; charset=utf-8')
+      .set('SOAPAction', 'consultarInventario')
+      .send(xml);
+
+    expect(response.status).toBe(200);
+    expect(response.text).toContain('<cantidadDisponible>20</cantidadDisponible>');
   });
 });
 
