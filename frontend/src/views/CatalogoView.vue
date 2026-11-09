@@ -15,7 +15,7 @@
     <div v-else-if="store.error && store.cajas.length === 0" class="state-box">
       <h3 class="state-title">Error al consultar datos</h3>
       <p class="state-desc">{{ store.error }}</p>
-      <button class="btn btn-secondary" @click="store.fetchCajasMensuales">Reintentar</button>
+      <button class="btn btn-secondary" @click="store.fetchCajas">Reintentar</button>
     </div>
 
     <div v-else-if="store.cajas.length === 0" class="state-box">
@@ -32,7 +32,7 @@
         <h2 class="caja-nombre">{{ caja.nombre }}</h2>
         <p v-if="caja.descripcion" class="caja-desc">{{ caja.descripcion }}</p>
         <div class="caja-price">
-          \${{ Number(caja.precioBase).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }} / mes
+          ${{ Number(caja.precioBase).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }} / mes
         </div>
         <div v-if="caja.composiciones?.length" class="composiciones-list">
           <span class="comp-label">Incluye:</span>
@@ -60,7 +60,7 @@ import { useCajasMensualesStore } from '@/modules/cajas-mensuales/store/cajas-me
 
 const store = useCajasMensualesStore();
 
-onMounted(() => store.fetchCajasMensuales());
+onMounted(() => store.fetchCajas());
 
 const formatCategoria = (cat: string) =>
   ({ vinos: '🍷 Vinos', cafes: '☕ Cafés', cervezas: '🍺 Cervezas' }[cat] || cat);

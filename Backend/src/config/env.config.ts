@@ -20,7 +20,7 @@ export const envConfig = {
   jwt: {
     secret: process.env.JWT_SECRET || 'clubcurator-secret-access-token-key-2026',
     refreshSecret: process.env.JWT_REFRESH_SECRET || 'clubcurator-secret-refresh-token-key-2026',
-    expiresIn: process.env.JWT_EXPIRES_IN || '15m',
+    expiresIn: process.env.JWT_EXPIRES_IN || '1d',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 };

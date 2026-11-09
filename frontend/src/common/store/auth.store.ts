@@ -100,6 +100,9 @@ export const useAuthStore = defineStore('auth', () => {
     }
   };
 
+  // Hidratar inmediatamente al inicializar el store
+  initAuth();
+
   const login = async (payload: LoginPayload) => {
     loading.value = true;
     error.value = null;

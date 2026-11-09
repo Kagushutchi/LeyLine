@@ -54,7 +54,7 @@
             @click="fillDemo('admin')"
             :disabled="authStore.loading"
           >
-            🏛️ Admin Bodega (admin)
+            Admin Bodega (admin)
           </button>
           <button
             type="button"
@@ -62,7 +62,7 @@
             @click="fillDemo('subscriptor')"
             :disabled="authStore.loading"
           >
-            🍷 Subscriptor (valentina)
+            Subscriptor (valentina)
           </button>
         </div>
       </div>
@@ -102,13 +102,18 @@ const fillDemo = (type: 'admin' | 'subscriptor') => {
 const handleSubmit = async () => {
   try {
     const res = await authStore.login(form);
-    const redirectUrl = route.query.redirect as string;
-    if (redirectUrl) {
-      router.push(redirectUrl);
-    } else if (res.user.role === 'admin') {
-      router.push('/');
+    const redirectUrl = (route.query.redirect as string) || '';
+
+    if (res.user.role === 'admin') {
+      const destination = redirectUrl && !redirectUrl.startsWith('/login') && redirectUrl !== '/catalogo'
+        ? redirectUrl
+        : '/';
+      router.push(destination);
     } else {
-      router.push('/catalogo');
+      const destination = redirectUrl && !redirectUrl.startsWith('/login') && redirectUrl !== '/'
+        ? redirectUrl
+        : '/catalogo';
+      router.push(destination);
     }
   } catch {
     // El toast de error ya es manejado en el store
