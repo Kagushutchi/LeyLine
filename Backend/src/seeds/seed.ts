@@ -9,6 +9,9 @@ import { CajaMensualProducto } from '../modules/cajas-mensuales/infrastructure/c
 import { Suscriptor } from '../modules/suscriptores/infrastructure/suscriptor.entity';
 import { Suscripcion } from '../modules/suscripciones/infrastructure/suscripcion.entity';
 import { StockProducto } from '../modules/inventario/infrastructure/stock-producto.entity';
+import { Tenant } from '../modules/auth/infrastructure/tenant.entity';
+import { User } from '../modules/auth/infrastructure/user.entity';
+import { JwtUtils } from '../common/utils/jwt';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -282,13 +285,42 @@ async function seed(): Promise<void> {
     return;
   }
 
+  // ── 2.1 Tenant y usuario administrador de demo ────────────────────────────
+  logger.info('Insertando tenant y usuario administrador de demo...');
+  const tenantRepo = ds.getRepository(Tenant);
+  const userRepo = ds.getRepository(User);
+
+  const demoTenant = await tenantRepo.save(
+    tenantRepo.create({
+      nombre: 'ClubCurator Demo',
+      slug: 'clubcurator-demo',
+      plan: 'artesanal',
+      activo: true,
+    })
+  );
+
+  const demoAdminPassword = 'Password123';
+  await userRepo.save(
+    userRepo.create({
+      username: 'admin-demo',
+      email: 'admin@clubcurator.demo',
+      password: await JwtUtils.hashPassword(demoAdminPassword),
+      role: 'admin',
+      tenantId: demoTenant.id,
+      activo: true,
+    })
+  );
+  logger.info(
+    `  ✔ Tenant '${demoTenant.nombre}' creado. Login de demo: admin@clubcurator.demo / ${demoAdminPassword}`
+  );
+
   // ── 3. Productos ──────────────────────────────────────────────────────────
   logger.info('Insertando productos...');
   const productoRepo = ds.getRepository(Producto);
   const productosGuardados: Producto[] = [];
 
   for (const data of productosData) {
-    const producto = productoRepo.create(data);
+    const producto = productoRepo.create({ ...data, tenantId: demoTenant.id });
     productosGuardados.push(await productoRepo.save(producto));
   }
   logger.info(`  ✔ ${productosGuardados.length} productos creados.`);
@@ -336,6 +368,7 @@ async function seed(): Promise<void> {
       'Selección de tres vinos premium de Mendoza: un Malbec de guarda, un Gran Corte y un Torrontés refrescante para abrir la noche.',
     precioBase: 14500,
     disponible: true,
+    tenantId: demoTenant.id,
   });
   const cajaVinosSaved = await cajaRepo.save(cajaVinos);
   cajasGuardadas.push(cajaVinosSaved);
@@ -374,6 +407,7 @@ async function seed(): Promise<void> {
       'Viaje por los mejores orígenes del mundo: desde la floral Geisha de Panamá hasta el robusto Espresso brasileño, más un blend signature.',
     precioBase: 6500,
     disponible: true,
+    tenantId: demoTenant.id,
   });
   const cajaCafesSaved = await cajaRepo.save(cajaCafes);
   cajasGuardadas.push(cajaCafesSaved);
@@ -412,6 +446,7 @@ async function seed(): Promise<void> {
       'Tres estilos clásicos de la cerveza artesanal argentina: la explosiva IPA lupulada, la compleja Stout imperial y la refrescante Wheat Ale.',
     precioBase: 4800,
     disponible: true,
+    tenantId: demoTenant.id,
   });
   const cajaCervezasSaved = await cajaRepo.save(cajaCervezas);
   cajasGuardadas.push(cajaCervezasSaved);
@@ -448,7 +483,7 @@ async function seed(): Promise<void> {
   const suscriptoresGuardados: Suscriptor[] = [];
 
   for (const data of suscriptoresData) {
-    const suscriptor = suscriptorRepo.create(data);
+    const suscriptor = suscriptorRepo.create({ ...data, tenantId: demoTenant.id });
     suscriptoresGuardados.push(await suscriptorRepo.save(suscriptor));
   }
   logger.info(`  ✔ ${suscriptoresGuardados.length} suscriptores creados.`);
@@ -507,7 +542,7 @@ async function seed(): Promise<void> {
 
   const suscripcionesGuardadas: Suscripcion[] = [];
   for (const data of suscripcionesData) {
-    const suscripcion = suscripcionRepo.create(data);
+    const suscripcion = suscripcionRepo.create({ ...data, tenantId: demoTenant.id });
     suscripcionesGuardadas.push(await suscripcionRepo.save(suscripcion));
   }
   logger.info(`  ✔ ${suscripcionesGuardadas.length} suscripciones creadas.`);
@@ -520,6 +555,8 @@ async function seed(): Promise<void> {
   logger.info(`  Cajas:         ${cajasGuardadas.length}`);
   logger.info(`  Suscriptores:  ${suscriptoresGuardados.length}`);
   logger.info(`  Suscripciones: ${suscripcionesGuardadas.length}`);
+  logger.info(`  Tenant demo:   ${demoTenant.nombre} (${demoTenant.slug})`);
+  logger.info(`  Login admin:   admin@clubcurator.demo / ${demoAdminPassword}`);
 
   await AppDataSource.destroy();
 }
