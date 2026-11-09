@@ -285,33 +285,50 @@ async function seed(): Promise<void> {
     return;
   }
 
-  // ── 2.1 Tenant y usuario administrador de demo ────────────────────────────
-  logger.info('Insertando tenant y usuario administrador de demo...');
+  // ── 2.1 Tenant y usuarios de demo ─────────────────────────────────────────
+  logger.info('Insertando tenant y usuarios de demo...');
   const tenantRepo = ds.getRepository(Tenant);
   const userRepo = ds.getRepository(User);
 
-  const demoTenant = await tenantRepo.save(
-    tenantRepo.create({
-      nombre: 'ClubCurator Demo',
-      slug: 'clubcurator-demo',
-      plan: 'artesanal',
+  let demoTenant = await tenantRepo.findOneBy({ slug: 'bodega-raices-de-cuyo' });
+  if (!demoTenant) {
+    demoTenant = await tenantRepo.save(
+      tenantRepo.create({
+        id: 'tenant-bodega-raices-001',
+        nombre: 'Bodega Raíces de Cuyo',
+        slug: 'bodega-raices-de-cuyo',
+        plan: 'artesanal',
+        activo: true,
+      })
+    );
+  }
+
+  const demoAdminPassword = 'password123';
+  await userRepo.save(
+    userRepo.create({
+      id: 'usr-admin-001',
+      username: 'admin',
+      email: 'admin@bodegaraices.com',
+      password: await JwtUtils.hashPassword(demoAdminPassword),
+      role: 'admin',
+      nombre: 'Administrador Bodega',
+      tenantId: demoTenant.id,
       activo: true,
     })
   );
 
-  const demoAdminPassword = 'Password123';
   await userRepo.save(
     userRepo.create({
       username: 'admin-demo',
       email: 'admin@clubcurator.demo',
-      password: await JwtUtils.hashPassword(demoAdminPassword),
+      password: await JwtUtils.hashPassword('Password123'),
       role: 'admin',
       tenantId: demoTenant.id,
       activo: true,
     })
   );
   logger.info(
-    `  ✔ Tenant '${demoTenant.nombre}' creado. Login de demo: admin@clubcurator.demo / ${demoAdminPassword}`
+    `  ✔ Tenant '${demoTenant.nombre}' creado. Login admin: admin / ${demoAdminPassword}`
   );
 
   // ── 3. Productos ──────────────────────────────────────────────────────────
@@ -487,6 +504,23 @@ async function seed(): Promise<void> {
     suscriptoresGuardados.push(await suscriptorRepo.save(suscriptor));
   }
   logger.info(`  ✔ ${suscriptoresGuardados.length} suscriptores creados.`);
+
+  // Crear usuario subscriptor para Valentina vinculado a su registro de suscriptor
+  const valentinaSuscriptor = suscriptoresGuardados.find(s => s.email === 'valentina.rossi@example.com') || suscriptoresGuardados[0];
+  await userRepo.save(
+    userRepo.create({
+      id: 'usr-sub-001',
+      username: 'valentina',
+      email: 'valentina.rossi@example.com',
+      password: await JwtUtils.hashPassword('password123'),
+      role: 'subscriptor',
+      nombre: 'Valentina',
+      apellido: 'Rossi',
+      suscriptorId: valentinaSuscriptor.id,
+      activo: true,
+    })
+  );
+  logger.info('  ✔ Usuario demo Valentina Rossi creado y vinculado a su suscriptor.');
 
   // ── 6. Suscripciones ──────────────────────────────────────────────────────
   logger.info('Insertando suscripciones...');

@@ -2,7 +2,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import SuscriptoresController from "./controller";
 import { validateBody, validateParams } from "../../../common/middlewares/validation.middleware";
 import { createSuscriptorSchema, updateSuscriptorSchema, suscriptorIdParamSchema } from "./suscriptor.schema";
-import { authMiddleware } from "../../../common/middlewares/auth.middleware";
+import { authMiddleware, optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
 import { requireRole } from "../../../common/middlewares/roles.middleware";
 import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
 
@@ -26,18 +26,20 @@ class SuscriptoresRouter
     {
         const router = Router();
 
-        router.get('/', async (_req: Request, res: Response, next: NextFunction) => {
+        router.get('/', optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
             try {
-                const result = await this.controller.getSuscriptores();
+                const tenantId = req.user?.role === 'admin' ? req.user.tenantId : undefined;
+                const result = await this.controller.getSuscriptores(tenantId);
                 res.status(200).json({ status: 'success', data: result });
             } catch (error) {
                 next(error);
             }
         });
 
-        router.get('/:id', validateParams(suscriptorIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+        router.get('/:id', optionalAuthMiddleware, validateParams(suscriptorIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
             try {
-                const result = await this.controller.getSuscriptorById(req.params.id);
+                const tenantId = req.user?.role === 'admin' ? req.user.tenantId : undefined;
+                const result = await this.controller.getSuscriptorById(req.params.id, tenantId);
                 res.status(200).json({ status: 'success', data: result });
             } catch (error) {
                 next(error);

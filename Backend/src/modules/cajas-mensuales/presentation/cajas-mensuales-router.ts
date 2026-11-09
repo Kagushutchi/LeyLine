@@ -8,7 +8,7 @@ import {
   cajaMensualIdParamSchema,
   periodoParamSchema,
 } from "./caja-mensual.schema";
-import { authMiddleware } from "../../../common/middlewares/auth.middleware";
+import { authMiddleware, optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
 import { requireRole } from "../../../common/middlewares/roles.middleware";
 import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
 
@@ -29,10 +29,11 @@ class CajasMensualesRouter {
   public createRouter(): Router {
     const router = Router();
 
-    // Catálogo: lectura pública.
-    router.get(this.BASE_URL, async (_req: Request, res: Response, next: NextFunction) => {
+    // Catálogo: si un admin está autenticado, lista solo sus cajas. Público/cliente ve catálogo general.
+    router.get(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const result = await this.controller.getCajasMensuales();
+        const tenantId = req.user?.role === 'admin' ? req.user.tenantId : undefined;
+        const result = await this.controller.getCajasMensuales(tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
@@ -50,10 +51,11 @@ class CajasMensualesRouter {
       }
     });
 
-    router.get(`${this.BASE_URL}:id`, validateParams(cajaMensualIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
+    router.get(`${this.BASE_URL}:id`, optionalAuthMiddleware, validateParams(cajaMensualIdParamSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
         const { id } = req.params;
-        const result = await this.controller.getCajaMensualById(id);
+        const tenantId = req.user?.role === 'admin' ? req.user.tenantId : undefined;
+        const result = await this.controller.getCajaMensualById(id, tenantId);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);

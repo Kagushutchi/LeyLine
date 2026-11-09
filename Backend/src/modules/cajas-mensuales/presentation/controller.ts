@@ -7,14 +7,14 @@ import UpdateCajaMensual from '../domain/useCase/update-caja-mensual';
 import DeleteCajaMensual from '../domain/useCase/delete-caja-mensual';
 
 export default class CajasMensualesController {
-  async getCajasMensuales(): Promise<any[]> {
+  async getCajasMensuales(tenantId?: string): Promise<any[]> {
     const useCase = new GetCajasMensuales();
-    return await useCase.execute();
+    return await useCase.execute(tenantId);
   }
 
-  async getCajaMensualById(id: string | number): Promise<any> {
+  async getCajaMensualById(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new GetCajaMensualById();
-    return await useCase.execute(id);
+    return await useCase.execute(id, tenantId);
   }
 
   async getCajasByMesAnio(mes: number, anio: number): Promise<any[]> {

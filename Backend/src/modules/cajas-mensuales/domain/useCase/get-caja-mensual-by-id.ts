@@ -9,9 +9,12 @@ export class GetCajaMensualById {
     this.repository = new CajaMensualRepository();
   }
 
-  async execute(id: string | number): Promise<CajaMensual> {
+  async execute(id: string | number, tenantId?: string): Promise<CajaMensual> {
     const caja = await this.repository.findOneById(id);
     if (!caja) {
+      throw new AppError(`Caja mensual con ID ${id} no encontrada`, 404);
+    }
+    if (tenantId && caja.tenantId !== tenantId) {
       throw new AppError(`Caja mensual con ID ${id} no encontrada`, 404);
     }
     return caja;

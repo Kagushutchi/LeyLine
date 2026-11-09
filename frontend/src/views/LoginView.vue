@@ -44,7 +44,7 @@
         </button>
       </form>
 
-      <!-- Acceso Rápido de Demostración (admin sembrado por el seed script) -->
+      <!-- Acceso Rápido de Demostración -->
       <div class="demo-section">
         <span class="demo-title">Acceso Rápido Demo:</span>
         <div class="demo-buttons">
@@ -52,9 +52,17 @@
             type="button"
             class="btn btn-secondary btn-sm"
             :disabled="authStore.loading"
-            @click="fillDemo"
+            @click="fillDemoAdmin"
           >
-            Admin de Demo (ClubCurator Demo)
+            Admin (Bodega Raíces)
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline-accent btn-sm"
+            :disabled="authStore.loading"
+            @click="fillDemoSubscriptor"
+          >
+            Cliente (Valentina Rossi)
           </button>
         </div>
       </div>
@@ -81,10 +89,14 @@ const form = reactive({
   password: '',
 });
 
-const fillDemo = () => {
-  // Credenciales creadas por Backend/src/seeds/seed.ts.
-  form.identifier = 'admin@clubcurator.demo';
-  form.password = 'Password123';
+const fillDemoAdmin = () => {
+  form.identifier = 'admin';
+  form.password = 'password123';
+};
+
+const fillDemoSubscriptor = () => {
+  form.identifier = 'valentina';
+  form.password = 'password123';
 };
 
 const handleSubmit = async () => {
@@ -229,6 +241,18 @@ const handleSubmit = async () => {
   display: flex;
   gap: 0.5rem;
   justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-outline-accent {
+  background-color: transparent;
+  color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+}
+
+.btn-outline-accent:hover {
+  background-color: var(--color-accent);
+  color: #ffffff;
 }
 
 .auth-footer {

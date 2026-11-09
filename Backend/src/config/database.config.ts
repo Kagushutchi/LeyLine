@@ -24,7 +24,7 @@ export class DatabaseFactory {
         synchronize: envConfig.db.synchronize,
         logging: envConfig.db.logging,
         entities,
-        migrations: [__dirname + '/../migrations/*.{ts,js}'],
+        migrations: process.env.NODE_ENV === 'test' ? [] : [__dirname + '/../migrations/*.{ts,js}'],
       });
     }
 
@@ -35,7 +35,7 @@ export class DatabaseFactory {
       synchronize: envConfig.db.synchronize,
       logging: envConfig.db.logging,
       entities,
-      migrations: [__dirname + '/../migrations/*.{ts,js}'],
+      migrations: process.env.NODE_ENV === 'test' ? [] : [__dirname + '/../migrations/*.{ts,js}'],
     });
   }
 }

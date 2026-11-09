@@ -2,7 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import ProductosController from './controller';
 import { validateBody, validateParams } from '../../../common/middlewares/validation.middleware';
 import { createProductoSchema, updateProductoSchema, productoIdParamSchema } from './producto.schema';
-import { authMiddleware } from '../../../common/middlewares/auth.middleware';
+import { authMiddleware, optionalAuthMiddleware } from '../../../common/middlewares/auth.middleware';
 import { requireRole } from '../../../common/middlewares/roles.middleware';
 import { tenantScopeMiddleware } from '../../../common/middlewares/tenant.middleware';
 
@@ -11,9 +11,24 @@ class ProductosRouter {
   private readonly router = Router();
 
   constructor() {
-    // Catálogo: lectura pública, sin autenticación.
-    this.router.get('/', this.handle(async () => this.controller.getAll()));
-    this.router.get('/:id', validateParams(productoIdParamSchema), this.handle(async (req) => this.controller.getById(req.params.id)));
+    // Catálogo: si un admin está autenticado, lista solo sus productos. Público/cliente ve catálogo general.
+    this.router.get(
+      '/',
+      optionalAuthMiddleware,
+      this.handle(async (req) => {
+        const tenantId = req.user?.role === 'admin' ? req.user.tenantId : undefined;
+        return this.controller.getAll(tenantId);
+      })
+    );
+    this.router.get(
+      '/:id',
+      optionalAuthMiddleware,
+      validateParams(productoIdParamSchema),
+      this.handle(async (req) => {
+        const tenantId = req.user?.role === 'admin' ? req.user.tenantId : undefined;
+        return this.controller.getById(req.params.id, tenantId);
+      })
+    );
 
     // Escritura: sólo administradores autenticados, acotados a su propio tenant.
     this.router.post(

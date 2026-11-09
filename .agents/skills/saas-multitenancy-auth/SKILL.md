@@ -149,7 +149,7 @@ Las tablas `productos`, `cajas_mensuales`, `suscripciones` y `suscriptores` cuen
 - **`RegisterView.vue`**: Pestañas interactivas para registro diferenciado:
   - Pestaña **Admin**: Negocio, Usuario, Correo, Contraseña.
   - Pestaña **Subscriptor**: Nombre, Apellido, Usuario, Correo, Contraseña.
-- **`CatalogoView.vue`**: Vista exclusiva para subscriptores donde pueden explorar las cajas mensuales activas, sus composiciones y precios en modo lectura.
+- **`CatalogoView.vue`**: Vista exclusiva para subscriptores donde pueden explorar las cajas mensuales activas, sus composiciones y precios, suscribirse a nuevas cajas mediante un botón directo, visualizar y gestionar sus membresías personales ("Mis Membresías Activas") con opciones de pausa y cancelación, y ver indicadores de estado "✓ Ya Suscripto".
 - **`AppNavbar.vue`**: Barra de navegación reactiva que muestra únicamente las opciones permitidas según el rol del usuario autenticado, su nombre, el distintivo de rol y el botón para cerrar sesión.
 
 ---
