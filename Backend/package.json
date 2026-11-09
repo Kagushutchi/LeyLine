@@ -6,7 +6,12 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
+    "test": "tsc && node --test test/*.test.cjs test/messaging/*.test.cjs",
     "start": "node dist/server.js",
+    "worker": "tsx src/workers/queue-worker.ts",
+    "worker:prod": "node dist/workers/queue-worker.js",
+    "queue:stats": "tsx src/workers/queue-admin.ts stats",
+    "queue:replay": "tsx src/workers/queue-admin.ts replay",
     "typeorm": "typeorm-ts-node-commonjs",
     "schema:sync": "typeorm-ts-node-commonjs schema:sync -d src/config/database.config.ts",
     "migration:generate": "typeorm-ts-node-commonjs migration:generate -d src/config/database.config.ts",
@@ -16,6 +21,7 @@
     "seed": "tsx src/seeds/seed.ts"
   },
   "dependencies": {
+    "amqplib": "^2.3.1",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -27,6 +33,7 @@
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.8",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",

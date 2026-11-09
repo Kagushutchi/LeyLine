@@ -5,11 +5,13 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToOne,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { UserRole } from '../../../common/interfaces/auth.interface';
 import { Tenant } from './tenant.entity';
+import { Suscriptor } from '../../suscriptores/infrastructure/suscriptor.entity';
 
 /**
  * Entidad de Infraestructura: User (Usuario del Sistema)
@@ -49,6 +51,13 @@ export class User {
   })
   @JoinColumn({ name: 'tenantId' })
   tenant?: Tenant;
+
+  @Column({ type: 'uuid', nullable: true, unique: true })
+  suscriptorId?: string | null;
+
+  @OneToOne(() => Suscriptor, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'suscriptorId' })
+  suscriptor?: Suscriptor | null;
 
   @Column({ type: 'text', nullable: true })
   refreshToken?: string | null;

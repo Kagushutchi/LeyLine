@@ -11,6 +11,7 @@ import authRouter from './modules/auth/presentation/auth-router';
 import suscriptoresRouter from './modules/suscriptores/presentation/suscriptores-router';
 import suscripcionesRouter from './modules/suscripciones/presentation/suscripciones-router';
 import cajasMensualesRouter from './modules/cajas-mensuales/presentation/cajas-mensuales-router';
+import { createSolicitudesRouter } from './modules/solicitudes-suscripcion/presentation/solicitudes-router';
 import productosRouter from './modules/productos/presentation/productos-router';
 
 export let dataSource: DataSource;
@@ -45,6 +46,10 @@ export const createApp = async (): Promise<Application> => {
   app.use('/api/suscripciones', suscripcionesRouter);
   app.use('/api/cajas-mensuales', cajasMensualesRouter);
   app.use('/api/productos', productosRouter);
+  // Only accept new requests when a worker/relay can process them (see QUEUE_RUNTIME_ENABLED).
+  if (process.env.SUBSCRIPTION_REQUESTS_ENABLED === 'true') {
+    app.use('/api/solicitudes-suscripcion', createSolicitudesRouter(dataSource));
+  }
 
   // Middleware de captura de errores
   app.use(errorHandlerMiddleware);

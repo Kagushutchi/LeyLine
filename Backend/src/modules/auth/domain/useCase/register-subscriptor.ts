@@ -1,7 +1,9 @@
 import { AppError } from '../../../../common/errors/app-error';
 import { JwtUtils } from '../../../../common/utils/jwt';
-import { UserRepository } from '../../infrastructure/user-repository';
-import { SuscriptorRepository } from '../../../suscriptores/infrastructure/suscriptor-repository';
+import { DataSource } from 'typeorm';
+import { dataSource } from '../../../../app';
+import { User } from '../../infrastructure/user.entity';
+import { Suscriptor } from '../../../suscriptores/infrastructure/suscriptor.entity';
 
 export interface RegisterSubscriptorDTO {
   email: string;
@@ -12,10 +14,7 @@ export interface RegisterSubscriptorDTO {
 }
 
 export default class RegisterSubscriptor {
-  constructor(
-    private readonly userRepo = new UserRepository(),
-    private readonly suscriptorRepo = new SuscriptorRepository()
-  ) {}
+  constructor(private readonly db: DataSource = dataSource) {}
 
   async execute(dto: RegisterSubscriptorDTO) {
     const { email, username, nombre, apellido, password } = dto;
@@ -34,36 +33,26 @@ export default class RegisterSubscriptor {
     const cleanEmail = email.toLowerCase().trim();
     const cleanUsername = username.toLowerCase().trim();
 
-    const existingEmail = await this.userRepo.findByEmail(cleanEmail);
-    if (existingEmail) {
-      throw new AppError('El correo electrónico ya está registrado', 409);
-    }
-
-    const existingUsername = await this.userRepo.findByUsername(cleanUsername);
-    if (existingUsername) {
-      throw new AppError('El nombre de usuario ya está en uso', 409);
-    }
-
-    // 1. Hash de contraseña y crear Usuario Subscriptor
     const hashedPassword = await JwtUtils.hashPassword(password);
-    const user = await this.userRepo.save({
-      username: cleanUsername,
-      email: cleanEmail,
-      nombre: nombre.trim(),
-      apellido: apellido.trim(),
-      password: hashedPassword,
-      role: 'subscriptor',
-      activo: true,
-    } as any);
+    return this.db.transaction(async (manager) => {
+      const users = manager.getRepository(User);
+      const subscribers = manager.getRepository(Suscriptor);
+      // Include deleted records: their unique email/username remains reserved.
+      if (await users.findOne({ where: { email: cleanEmail }, withDeleted: true })) {
+        throw new AppError('El correo electrónico ya está registrado', 409);
+      }
+      if (await users.findOne({ where: { username: cleanUsername }, withDeleted: true })) {
+        throw new AppError('El nombre de usuario ya está en uso', 409);
+      }
+      const existingSubscriber = await subscribers.createQueryBuilder('subscriber')
+        .withDeleted()
+        .where('LOWER(subscriber.email) = :email', { email: cleanEmail })
+        .getOne();
+      if (existingSubscriber) {
+        throw new AppError('No se puede completar el registro con este correo', 409);
+      }
 
-    // 2. Crear registro de Suscriptor de dominio si aún no existe para este correo
-    const allSuscriptores = await this.suscriptorRepo.findAll();
-    const existingSuscriptor = allSuscriptores.find(
-      (s) => s.email?.toLowerCase() === cleanEmail
-    );
-
-    if (!existingSuscriptor) {
-      await this.suscriptorRepo.save({
+      const subscriber = await subscribers.save({
         nombre: nombre.trim(),
         apellido: apellido.trim(),
         email: cleanEmail,
@@ -75,36 +64,45 @@ export default class RegisterSubscriptor {
           alergiasRestricciones: [],
           notasAdicionales: '',
         },
-      } as any);
-    }
+      });
+      const user = await users.save({
+        username: cleanUsername,
+        email: cleanEmail,
+        nombre: nombre.trim(),
+        apellido: apellido.trim(),
+        password: hashedPassword,
+        role: 'subscriptor',
+        activo: true,
+        suscriptorId: subscriber.id,
+      });
 
-    // 3. Generar tokens (Access y Refresh)
-    const jwtPayload = {
-      userId: user.id,
-      username: user.username,
-      email: user.email,
-      role: user.role,
-      nombre: user.nombre,
-      apellido: user.apellido,
-    };
-
-    const accessToken = JwtUtils.generateAccessToken(jwtPayload);
-    const refreshToken = JwtUtils.generateRefreshToken(jwtPayload);
-
-    await this.userRepo.updateRefreshToken(user.id, refreshToken);
-
-    return {
-      user: {
-        id: user.id,
+      const jwtPayload = {
+        userId: user.id,
         username: user.username,
         email: user.email,
         role: user.role,
         nombre: user.nombre,
         apellido: user.apellido,
-      },
-      accessToken,
-      refreshToken,
-    };
+      };
+
+      const accessToken = JwtUtils.generateAccessToken(jwtPayload);
+      const refreshToken = JwtUtils.generateRefreshToken(jwtPayload);
+
+      await users.update(user.id, { refreshToken });
+
+      return {
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          role: user.role,
+          nombre: user.nombre,
+          apellido: user.apellido,
+        },
+        accessToken,
+        refreshToken,
+      };
+    });
   }
 }
 

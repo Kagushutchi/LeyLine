@@ -6,7 +6,9 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
     const isPostgres = queryRunner.connection.options.type === 'postgres';
     const dateType = isPostgres ? 'timestamp' : 'datetime';
     const nowFunc = isPostgres ? 'NOW()' : "datetime('now')";
-    const boolType = isPostgres ? 'boolean' : 'boolean';
+    const boolType = 'boolean';
+    // PostgreSQL boolean/uuid columns reject 1 and non-UUID ids; SQLite keeps its historical values.
+    const TRUE = isPostgres ? 'true' : '1';
     const textType = 'text';
 
     // 1. Crear tabla tenants si no existe
@@ -17,7 +19,7 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
           "nombre" varchar(150) NOT NULL,
           "slug" varchar(100) NOT NULL UNIQUE,
           "plan" varchar(50) NOT NULL DEFAULT 'artesanal',
-          "activo" ${boolType} NOT NULL DEFAULT (1),
+          "activo" ${boolType} NOT NULL DEFAULT (${TRUE}),
           "createdAt" ${dateType} NOT NULL DEFAULT (${nowFunc}),
           "updatedAt" ${dateType} NOT NULL DEFAULT (${nowFunc}),
           "deletedAt" ${dateType} NULL
@@ -38,7 +40,7 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
           "apellido" varchar(150) NULL,
           "tenantId" varchar NULL,
           "refreshToken" ${textType} NULL,
-          "activo" ${boolType} NOT NULL DEFAULT (1),
+          "activo" ${boolType} NOT NULL DEFAULT (${TRUE}),
           "createdAt" ${dateType} NOT NULL DEFAULT (${nowFunc}),
           "updatedAt" ${dateType} NOT NULL DEFAULT (${nowFunc}),
           "deletedAt" ${dateType} NULL,
@@ -59,7 +61,9 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
     }
 
     // 4. Sembrar Tenant por defecto y asignar a registros existentes
-    const defaultTenantId = 'tenant-bodega-raices-001';
+    const defaultTenantId = isPostgres ? '00000000-0000-4000-8000-000000000001' : 'tenant-bodega-raices-001';
+    const adminUserId = isPostgres ? '00000000-0000-4000-8000-0000000000a1' : 'usr-admin-001';
+    const subUserId = isPostgres ? '00000000-0000-4000-8000-0000000000b1' : 'usr-sub-001';
     const existingTenants: any[] = await queryRunner.query(
       `SELECT "id" FROM "tenants" WHERE "id" = '${defaultTenantId}' OR "slug" = 'bodega-raices-de-cuyo'`
     );
@@ -67,7 +71,7 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
     if (existingTenants.length === 0) {
       await queryRunner.query(`
         INSERT INTO "tenants" ("id", "nombre", "slug", "plan", "activo")
-        VALUES ('${defaultTenantId}', 'Bodega Raíces de Cuyo', 'bodega-raices-de-cuyo', 'premium', 1)
+        VALUES ('${defaultTenantId}', 'Bodega Raíces de Cuyo', 'bodega-raices-de-cuyo', 'premium', ${TRUE})
       `);
     }
 
@@ -89,7 +93,7 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
     if (adminUser.length === 0) {
       await queryRunner.query(`
         INSERT INTO "users" ("id", "username", "email", "password", "role", "nombre", "tenantId", "activo")
-        VALUES ('usr-admin-001', 'admin', 'admin@bodegaraices.com', '${defaultPasswordHash}', 'admin', 'Administrador Bodega', '${defaultTenantId}', 1)
+        VALUES ('${adminUserId}', 'admin', 'admin@bodegaraices.com', '${defaultPasswordHash}', 'admin', 'Administrador Bodega', '${defaultTenantId}', ${TRUE})
       `);
     }
 
@@ -99,7 +103,7 @@ export class AddAuthAndMultiTenancy1795000000000 implements MigrationInterface {
     if (subUser.length === 0) {
       await queryRunner.query(`
         INSERT INTO "users" ("id", "username", "email", "password", "role", "nombre", "apellido", "activo")
-        VALUES ('usr-sub-001', 'valentina', 'valentina.rossi@example.com', '${defaultPasswordHash}', 'subscriptor', 'Valentina', 'Rossi', 1)
+        VALUES ('${subUserId}', 'valentina', 'valentina.rossi@example.com', '${defaultPasswordHash}', 'subscriptor', 'Valentina', 'Rossi', ${TRUE})
       `);
     }
   }

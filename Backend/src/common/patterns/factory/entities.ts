@@ -5,6 +5,9 @@ import { CajaMensualProducto } from "../../../modules/cajas-mensuales/infrastruc
 import { Producto } from "../../../modules/productos/infrastructure/producto.entity";
 import { Tenant } from "../../../modules/auth/infrastructure/tenant.entity";
 import { User } from "../../../modules/auth/infrastructure/user.entity";
+import { SolicitudSuscripcion } from "../../../modules/solicitudes-suscripcion/infrastructure/solicitud.entity";
+import { MensajeOutbox } from "../../../modules/solicitudes-suscripcion/infrastructure/outbox.entity";
+import { MensajeInbox } from "../../../modules/solicitudes-suscripcion/infrastructure/inbox.entity";
 
 export const entities = [
     Tenant,
@@ -13,5 +16,8 @@ export const entities = [
     Suscripcion,
     CajaMensual,
     CajaMensualProducto,
-    Producto
+    Producto,
+    SolicitudSuscripcion,
+    MensajeOutbox,
+    MensajeInbox
 ];

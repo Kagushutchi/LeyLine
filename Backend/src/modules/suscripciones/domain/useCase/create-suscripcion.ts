@@ -28,6 +28,11 @@ export default class CreateSuscripcion {
     if (!cajaMensual) throw new AppError(`Caja mensual con ID ${payload.cajaMensualId} no encontrada`, 404);
     if (!cajaMensual.disponible) throw new AppError('La caja mensual seleccionada no está disponible', 400);
 
+    const live = await dataSource.getRepository(Suscripcion).createQueryBuilder('s')
+      .where('s.suscriptorId = :sid AND s.cajaMensualId = :cid AND s.estado IN (:...states)',
+        { sid: suscriptor.id, cid: cajaMensual.id, states: ['activa', 'pausada'] }).getCount();
+    if (live > 0) throw new AppError('Ya existe una suscripción para esta caja', 409);
+
     const estado = payload.estado || 'activa';
     if (!['activa', 'pausada', 'cancelada'].includes(estado)) {
       throw new AppError('El estado de la suscripción no es válido', 400);

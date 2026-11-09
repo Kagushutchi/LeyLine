@@ -1,8 +1,16 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
-import { SuscriptorRepository } from "../../suscriptores/infrastructure/suscriptor-repository";
+import { authMiddleware } from "../../../common/middlewares/auth.middleware";
+import { AppError } from "../../../common/errors/app-error";
+import { dataSource } from "../../../app";
+import { User } from "../../auth/infrastructure/user.entity";
+import { CajaMensualRepository } from "../../cajas-mensuales/infrastructure/caja-mensual-repository";
 import SuscripcionesController from "./controller";
 
+/**
+ * Rutas heredadas (síncronas). Todas exigen autenticación y quedan aisladas por
+ * tenant (admin) o por suscriptor vinculado de forma confiable (subscriptor).
+ * El flujo con colas vive en /api/solicitudes-suscripcion.
+ */
 class SuscripcionesRouter {
   private router: Router;
   private controller: SuscripcionesController;
@@ -17,149 +25,124 @@ class SuscripcionesRouter {
     return this.router;
   }
 
+  /** Suscriptor vinculado al usuario autenticado (nunca inferido por email). */
+  private async linkedSuscriptorId(req: Request): Promise<string> {
+    const user = await dataSource.getRepository(User).findOneBy({ id: req.user!.userId });
+    if (!user || !user.activo || !user.suscriptorId) {
+      throw new AppError('No existe un suscriptor vinculado', 403);
+    }
+    return user.suscriptorId;
+  }
+
+  private adminTenant(req: Request): string {
+    const tenantId = req.user!.tenantId;
+    if (!tenantId) throw new AppError('Usuario sin tenant asignado', 403);
+    return tenantId;
+  }
+
+  private requireAdmin(req: Request): string {
+    if (req.user!.role !== 'admin') throw new AppError('Acción no permitida', 403);
+    return this.adminTenant(req);
+  }
+
+  /** Carga la suscripción y verifica que el solicitante pueda operar sobre ella. */
+  private async authorizedSuscripcion(req: Request, id: string, allowOwner: boolean): Promise<any> {
+    const suscripcion = await this.controller.getSuscripcionById(id);
+    if (req.user!.role === 'admin') {
+      if (suscripcion.tenantId !== this.adminTenant(req)) throw new AppError('Suscripción no encontrada', 404);
+      return suscripcion;
+    }
+    if (allowOwner && req.user!.role === 'subscriptor') {
+      if (suscripcion.suscriptorId !== await this.linkedSuscriptorId(req)) throw new AppError('Suscripción no encontrada', 404);
+      return suscripcion;
+    }
+    throw new AppError('Acción no permitida', 403);
+  }
+
   public createRouter(): Router {
     const router = Router();
+    router.use(authMiddleware);
 
-    router.get(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        let tenantId: string | undefined = undefined;
-        let suscriptorId: string | undefined = undefined;
+    const wrap = (handler: (req: Request, res: Response) => Promise<void>) =>
+      (req: Request, res: Response, next: NextFunction) => { handler(req, res).catch(next); };
 
-        if (req.user) {
-          if (req.user.role === 'admin') {
-            tenantId = req.tenantId || req.user.tenantId;
-          } else if (req.user.role === 'subscriptor') {
-            const suscriptorRepo = new SuscriptorRepository();
-            const all = await suscriptorRepo.findAll();
-            const matching = all.find((s) => s.email?.toLowerCase() === req.user?.email?.toLowerCase());
-            suscriptorId = matching ? matching.id : req.user.userId;
-          }
-        }
+    router.get(this.BASE_URL, wrap(async (req, res) => {
+      let tenantId: string | undefined;
+      let suscriptorId: string | undefined;
+      if (req.user!.role === 'admin') tenantId = this.adminTenant(req);
+      else suscriptorId = await this.linkedSuscriptorId(req);
+      const result = await this.controller.getSuscripciones(tenantId, suscriptorId);
+      res.status(200).json({ status: 'success', data: result });
+    }));
 
-        const result = await this.controller.getSuscripciones(tenantId, suscriptorId);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    const bySuscriptor = wrap(async (req, res) => {
+      const requested = req.params.suscriptorId;
+      if (req.user!.role === 'admin') {
+        const tenantId = this.adminTenant(req);
+        const all = await this.controller.getSuscripcionesBySuscriptor(requested);
+        res.status(200).json({ status: 'success', data: all.filter((s: any) => s.tenantId === tenantId) });
+        return;
       }
+      if (requested !== await this.linkedSuscriptorId(req)) throw new AppError('Acción no permitida', 403);
+      const result = await this.controller.getSuscripcionesBySuscriptor(requested);
+      res.status(200).json({ status: 'success', data: result });
     });
+    router.get(`${this.BASE_URL}cliente/:suscriptorId`, bySuscriptor);
+    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, bySuscriptor);
 
-    router.get(`${this.BASE_URL}cliente/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { suscriptorId } = req.params;
-        const result = await this.controller.getSuscripcionesBySuscriptor(suscriptorId);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
+    router.get(`${this.BASE_URL}:id`, wrap(async (req, res) => {
+      const result = await this.authorizedSuscripcion(req, req.params.id, true);
+      res.status(200).json({ status: 'success', data: result });
+    }));
+
+    router.post(this.BASE_URL, wrap(async (req, res) => {
+      const body = req.body ?? {};
+      if (typeof body.cajaMensualId !== 'string') throw new AppError('cajaMensualId es requerido', 400);
+      const caja = await new CajaMensualRepository().findOneById(body.cajaMensualId);
+      if (!caja) throw new AppError('Caja mensual no encontrada', 404);
+
+      let payload: any;
+      if (req.user!.role === 'admin') {
+        // El tenant sale del token y la caja debe pertenecerle.
+        const tenantId = this.adminTenant(req);
+        if (caja.tenantId !== tenantId) throw new AppError('Caja mensual no encontrada', 404);
+        payload = { ...body, tenantId };
+      } else {
+        // Suscriptor: solo para sí mismo, con tenant y precio tomados de la caja.
+        payload = {
+          cajaMensualId: caja.id, suscriptorId: await this.linkedSuscriptorId(req),
+          tenantId: caja.tenantId, montoMensual: caja.precioBase,
+        };
       }
+      const result = await this.controller.createSuscripcion(payload, payload.tenantId);
+      res.status(201).json({ status: 'success', data: result });
+    }));
+
+    const pause = wrap(async (req, res) => {
+      await this.authorizedSuscripcion(req, req.params.id, true);
+      res.status(200).json({ status: 'success', data: await this.controller.pauseSuscripcion(req.params.id) });
     });
-
-    router.get(`${this.BASE_URL}suscriptor/:suscriptorId`, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const result = await this.controller.getSuscripcionesBySuscriptor(req.params.suscriptorId);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
+    const cancel = wrap(async (req, res) => {
+      await this.authorizedSuscripcion(req, req.params.id, true);
+      res.status(200).json({ status: 'success', data: await this.controller.cancelSuscripcion(req.params.id) });
     });
+    router.put(`${this.BASE_URL}:id/pausar`, pause);
+    router.patch(`${this.BASE_URL}:id/pausar`, pause);
+    router.put(`${this.BASE_URL}:id/cancelar`, cancel);
+    router.patch(`${this.BASE_URL}:id/cancelar`, cancel);
 
-    router.get(`${this.BASE_URL}:id`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const tenantId = req.user?.role === 'admin' ? (req.tenantId || req.user.tenantId) : undefined;
-        const result = await this.controller.getSuscripcionById(id, tenantId);
-        if (!result) {
-          return res.status(404).json({ status: 'error', message: 'Suscripción no encontrada' });
-        }
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
+    router.put(`${this.BASE_URL}:id`, wrap(async (req, res) => {
+      this.requireAdmin(req);
+      await this.authorizedSuscripcion(req, req.params.id, false);
+      const { tenantId: _t, suscriptorId: _s, ...changes } = req.body ?? {};
+      res.status(200).json({ status: 'success', data: await this.controller.updateSuscripcion(req.params.id, changes) });
+    }));
 
-    router.post(this.BASE_URL, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        let tenantId = req.body.tenantId;
-
-        if (req.user) {
-          if (req.user.role === 'admin' && req.user.tenantId) {
-            tenantId = req.user.tenantId;
-            req.body.tenantId = tenantId;
-          } else if (req.user.role === 'subscriptor') {
-            const suscriptorRepo = new SuscriptorRepository();
-            const all = await suscriptorRepo.findAll();
-            const matching = all.find((s) => s.email?.toLowerCase() === req.user?.email?.toLowerCase());
-            if (matching) {
-              req.body.suscriptorId = matching.id;
-            }
-          }
-        }
-
-        const result = await this.controller.createSuscripcion(req.body, tenantId);
-        res.status(201).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    router.put(`${this.BASE_URL}:id/pausar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.pauseSuscripcion(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    router.patch(`${this.BASE_URL}:id/pausar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.pauseSuscripcion(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    router.put(`${this.BASE_URL}:id/cancelar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.cancelSuscripcion(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    router.patch(`${this.BASE_URL}:id/cancelar`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.cancelSuscripcion(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    router.put(`${this.BASE_URL}:id`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.updateSuscripcion(id, req.body);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
-
-    router.delete(`${this.BASE_URL}:id`, optionalAuthMiddleware, async (req: Request, res: Response, next: NextFunction) => {
-      try {
-        const { id } = req.params;
-        const result = await this.controller.deleteSuscripcion(id);
-        res.status(200).json({ status: 'success', data: result });
-      } catch (error) {
-        next(error);
-      }
-    });
+    router.delete(`${this.BASE_URL}:id`, wrap(async (req, res) => {
+      this.requireAdmin(req);
+      await this.authorizedSuscripcion(req, req.params.id, false);
+      res.status(200).json({ status: 'success', data: await this.controller.deleteSuscripcion(req.params.id) });
+    }));
 
     return router;
   }
