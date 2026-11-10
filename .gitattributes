@@ -1,0 +1,5 @@
+# Los scripts que corren dentro de contenedores Linux o con bash deben conservar saltos de línea Unix (LF),
+# aunque el repo se clone en Windows con core.autocrlf=true. Con CRLF fallan con "bad interpreter" / "not found".
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.yml text eol=lf

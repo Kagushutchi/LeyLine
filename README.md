@@ -123,6 +123,7 @@ el **frontend** (`http://localhost:5173`, con recarga en caliente de `frontend/s
 - El contenedor `stripe` solo actúa con `PAYMENT_PROVIDER=stripe`; con `fake` o `none` termina sin error. Necesita `STRIPE_SECRET_KEY`: una clave `sk_test_...`, o una restringida con el permiso **Debugging Tools: Write**. Si `STRIPE_WEBHOOK_SECRET` no coincide con el que obtiene el contenedor, lo avisa en su log con el valor correcto.
 - Cambios en el backend requieren `docker compose up --build`; el frontend los toma solo.
 - No uses a la vez `npm run dev` y Docker: ocupan los mismos puertos (3000, 5173).
+- **Windows**: abrí Docker Desktop y esperá a que diga "Engine running" antes de `docker compose up` (si no, falla con `open //./pipe/dockerDesktopLinuxEngine`); verificá con `docker version`. Se necesita WSL 2. En Windows usá el modo Docker: `npm run dev` requiere `bash` (Git Bash o WSL) para el script de Stripe. El `.gitattributes` fuerza saltos de línea LF en los `.sh`; si ya clonaste antes de tenerlo, corré `git add --renormalize .` o volvé a clonar.
 - `npm run logs` sigue los logs; `docker compose down` apaga todo (los datos quedan en volúmenes).
 
 > **Nota:** las migraciones iniciales y de inventario ya están versionadas en `Backend/src/migrations/`. Si cambiás entidades, generá una nueva con
