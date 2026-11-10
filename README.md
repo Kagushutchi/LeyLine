@@ -75,6 +75,56 @@ cd frontend
 npm run dev
 ```
 
+### 3. Todo el entorno con un solo comando (cola + pagos + frontend)
+
+Desde la raíz del repositorio, una sola vez:
+
+```bash
+npm run init:all
+```
+
+y luego:
+
+```bash
+npm run dev
+```
+
+Levanta, en una sola terminal con la salida prefijada por proceso:
+
+| Prefijo | Qué corre |
+|---|---|
+| `[infra]` | `docker compose up -d --wait` (PostgreSQL + RabbitMQ) y sus logs |
+| `[api]` | `npm run dev` del Backend |
+| `[worker]` | `npm run worker` (relay, consumidores y reconciliador de la cola) |
+| `[stripe]` | `stripe listen` hacia `/api/webhooks/payments` (sólo si `PAYMENT_PROVIDER=stripe`) |
+| `[web]` | `npm run dev` del frontend |
+
+`npm run dev:backend` hace lo mismo sin el frontend y `npm run dev:down` baja los contenedores.
+Requiere `Backend/.env` configurado (ver `Backend/.env.example`: cola y pagos) y `frontend/.env` con `VITE_SUBSCRIPTION_REQUESTS_ENABLED=true`.
+Con `PAYMENT_PROVIDER=stripe` hace falta el [Stripe CLI](https://docs.stripe.com/stripe-cli) con `stripe login`; el script avisa si
+`STRIPE_WEBHOOK_SECRET` no coincide con el de `stripe listen`. Detalle del flujo de pagos en [docs/pagos-recurrentes.md](docs/pagos-recurrentes.md).
+
+### 4. Todo en Docker (sin comandos manuales)
+
+Con Docker alcanza, sin instalar Node ni correr nada a mano:
+
+```bash
+cp Backend/.env.example Backend/.env   # una sola vez; completar las claves de pago si se usa Stripe
+```
+
+```bash
+docker compose up --build
+```
+
+(o `npm run up` desde la raíz). Levanta PostgreSQL, RabbitMQ, la **API**, el **worker**, el **seed** de datos de ejemplo (una sola vez; no duplica),
+el **frontend** (`http://localhost:5173`, con recarga en caliente de `frontend/src`) y el reenvío de webhooks de **Stripe**.
+
+- Dentro de Docker la API y el worker siempre corren con la cola y las solicitudes habilitadas y apuntan a los contenedores `postgres` y `rabbitmq`; el resto de la configuración sale de `Backend/.env`.
+- El contenedor `stripe` solo actúa con `PAYMENT_PROVIDER=stripe`; con `fake` o `none` termina sin error. Necesita `STRIPE_SECRET_KEY`: una clave `sk_test_...`, o una restringida con el permiso **Debugging Tools: Write**. Si `STRIPE_WEBHOOK_SECRET` no coincide con el que obtiene el contenedor, lo avisa en su log con el valor correcto.
+- Cambios en el backend requieren `docker compose up --build`; el frontend los toma solo.
+- No uses a la vez `npm run dev` y Docker: ocupan los mismos puertos (3000, 5173).
+- `npm run logs` sigue los logs; `docker compose down` apaga todo (los datos quedan en volúmenes).
+
 > **Nota:** las migraciones iniciales y de inventario ya están versionadas en `Backend/src/migrations/`. Si cambiás entidades, generá una nueva con
 > `npm run migration:generate -- src/migrations/NombreDelCambio` y aplicala con `npm run migration:run`.
 

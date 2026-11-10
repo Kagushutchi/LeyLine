@@ -54,6 +54,21 @@ export class Suscripcion {
   @Column({ type: 'uuid', nullable: true })
   tenantId?: string;
 
+  /** Proveedor de pago que cobra la suscripción (null = alta administrativa sin cobro). */
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  paymentProvider: string | null;
+
+  /** Id opaco de la suscripción en el proveedor; sólo lo interpreta su IPaymentStrategy. */
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  providerSubscriptionId: string | null;
+
+  /**
+   * true cuando la suscripción quedó pausada porque el proveedor rechazó un cobro (no porque el suscriptor la pausó).
+   * Se reactiva sola al cobrarse; el suscriptor no puede reanudarla a mano sin pagar.
+   */
+  @Column({ type: 'boolean', default: false })
+  pausadaPorPago: boolean;
+
   @CreateDateColumn()
   createdAt: Date;
 

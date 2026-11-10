@@ -68,7 +68,7 @@ export class AceptarSolicitud {
               suscriptorId: input.suscriptorId, cajaMensualId: input.cajaMensualId, estado: In(['activa', 'pausada']),
             } })) throw new SolicitudConflictError('ALREADY_SUBSCRIBED', 'Ya existe una suscripción para esta caja');
             if (await requests.findOne({ where: {
-              suscriptorId: input.suscriptorId, cajaMensualId: input.cajaMensualId, estado: In(['pendiente', 'procesando']),
+              suscriptorId: input.suscriptorId, cajaMensualId: input.cajaMensualId, estado: In(['pendiente', 'procesando', 'esperando_pago']),
             } })) throw new SolicitudConflictError('REQUEST_IN_PROGRESS', 'Ya hay un pedido en curso para esta caja');
             const boxes = manager.getRepository(CajaMensual).createQueryBuilder('box')
               .where('box.id = :id', { id: input.cajaMensualId });

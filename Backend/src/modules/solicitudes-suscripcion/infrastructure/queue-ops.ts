@@ -37,7 +37,7 @@ export async function replayFailedRequest(db: DataSource, requestId: string, ope
     if (!request) throw new Error('Request not found');
     if (request.estado !== 'fallido') throw new Error(`Only failed requests can be replayed (state: ${request.estado})`);
     const outbox = manager.getRepository(MensajeOutbox);
-    const message = await outbox.findOneBy({ solicitudId: requestId });
+    const message = await outbox.findOneBy({ solicitudId: requestId, tipo: 'subscription.requested' });
     if (!message) throw new Error('Outbox message not found');
     const content = JSON.parse(message.contenido) as Record<string, unknown>;
     delete content.attempt;

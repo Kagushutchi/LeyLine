@@ -80,6 +80,14 @@
                   Pausar
                 </button>
                 <button
+                  v-if="item.estado === 'pausada'"
+                  class="btn btn-secondary btn-sm"
+                  title="Reanudar Suscripción"
+                  @click="handleResume(item.id)"
+                >
+                  Reanudar
+                </button>
+                <button
                   v-if="item.estado !== 'cancelada'"
                   class="btn btn-secondary btn-sm"
                   title="Cancelar Suscripción"
@@ -243,6 +251,17 @@ const handlePause = async (id: string) => {
     const e = error as { response?: { data?: { message?: string } }; message?: string };
     const msg = e.response?.data?.message || e.message || 'No se pudo pausar';
     toast.error(msg, 'Error al pausar');
+  }
+};
+
+const handleResume = async (id: string) => {
+  try {
+    await store.resumeSuscripcion(id);
+    toast.success('Suscripción reanudada con éxito');
+  } catch (error: unknown) {
+    const e = error as { response?: { data?: { message?: string } }; message?: string };
+    const msg = e.response?.data?.message || e.message || 'No se pudo reanudar';
+    toast.error(msg, 'Error al reanudar');
   }
 };
 

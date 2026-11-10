@@ -1,0 +1,19 @@
+{
+  "name": "leyline",
+  "private": true,
+  "description": "Orquestación de desarrollo local: infraestructura, API, worker, webhooks de Stripe y frontend",
+  "scripts": {
+    "init:all": "npm install && npm --prefix Backend install && npm --prefix frontend install",
+    "up": "docker compose up --build",
+    "up:d": "docker compose up -d --build",
+    "logs": "docker compose logs -f --tail=50 api worker web stripe",
+    "dev": "npm run dev:infra && concurrently --kill-others-on-fail --prefix \"[{name}]\" --names \"infra,api,worker,stripe,web\" --prefix-colors \"gray,cyan,magenta,yellow,green\" \"npm run dev:infra:logs\" \"npm --prefix Backend run dev\" \"npm --prefix Backend run worker\" \"bash scripts/dev-stripe.sh\" \"npm --prefix frontend run dev\"",
+    "dev:backend": "npm run dev:infra && concurrently --kill-others-on-fail --prefix \"[{name}]\" --names \"infra,api,worker,stripe\" --prefix-colors \"gray,cyan,magenta,yellow\" \"npm run dev:infra:logs\" \"npm --prefix Backend run dev\" \"npm --prefix Backend run worker\" \"bash scripts/dev-stripe.sh\"",
+    "dev:infra": "docker compose up -d --wait postgres rabbitmq",
+    "dev:infra:logs": "docker compose logs -f --tail=0 postgres rabbitmq",
+    "dev:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

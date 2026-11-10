@@ -294,7 +294,7 @@ async function seed(): Promise<void> {
   if (!demoTenant) {
     demoTenant = await tenantRepo.save(
       tenantRepo.create({
-        id: 'tenant-bodega-raices-001',
+        id: '00000000-0000-4000-8000-000000000001', // UUID válido: Postgres rechaza ids no-UUID
         nombre: 'Bodega Raíces de Cuyo',
         slug: 'bodega-raices-de-cuyo',
         plan: 'artesanal',
@@ -306,7 +306,7 @@ async function seed(): Promise<void> {
   const demoAdminPassword = 'password123';
   await userRepo.save(
     userRepo.create({
-      id: 'usr-admin-001',
+      id: '00000000-0000-4000-8000-0000000000a1',
       username: 'admin',
       email: 'admin@bodegaraices.com',
       password: await JwtUtils.hashPassword(demoAdminPassword),
@@ -509,7 +509,7 @@ async function seed(): Promise<void> {
   const valentinaSuscriptor = suscriptoresGuardados.find(s => s.email === 'valentina.rossi@example.com') || suscriptoresGuardados[0];
   await userRepo.save(
     userRepo.create({
-      id: 'usr-sub-001',
+      id: '00000000-0000-4000-8000-0000000000b1',
       username: 'valentina',
       email: 'valentina.rossi@example.com',
       password: await JwtUtils.hashPassword('password123'),

@@ -53,7 +53,8 @@ export const useSolicitudesStore = defineStore('solicitudes', () => {
       items.value = list; ready.value = !storageBlocked.value;
       if (!storageBlocked.value) error.value = null;
       const current = draft.value;
-      if (current?.requestId && list.some(item => item.id === current.requestId && isTerminal(item.estado))) {
+      // El borrador (clave de idempotencia) ya cumplió su función cuando el pedido terminó o quedó esperando el pago.
+      if (current?.requestId && list.some(item => item.id === current.requestId && (isTerminal(item.estado) || item.estado === 'esperando_pago'))) {
         localStorage.removeItem(prefix + owner); draft.value = null; uncertain.value = false;
       }
     } catch {
@@ -129,9 +130,22 @@ export const useSolicitudesStore = defineStore('solicitudes', () => {
     } catch { return null; }
   }
 
-  return { wait, items, draft, loading, sending, error, uncertain, ready, submissionProblem, setUser, refresh, submit };
+  /** Descarta un pedido que espera el pago; devuelve true si quedó descartado. */
+  async function discard(id: string): Promise<boolean> {
+    const owner = userId.value; const version = generation;
+    if (!owner) return false;
+    try {
+      const updated = await solicitudesService.discard(id);
+      if (version !== generation || owner !== userId.value) return false;
+      items.value = items.value.map(item => item.id === id ? updated : item);
+      if (draft.value?.requestId === id) { localStorage.removeItem(prefix + owner); draft.value = null; uncertain.value = false; }
+      return true;
+    } catch { return false; }
+  }
+
+  return { discard, wait, items, draft, loading, sending, error, uncertain, ready, submissionProblem, setUser, refresh, submit };
 });
 
 export function isTerminal(state: SolicitudDTO['estado']): boolean {
-  return state === 'completado' || state === 'rechazado' || state === 'fallido';
+  return state === 'completado' || state === 'rechazado' || state === 'fallido' || state === 'expirado';
 }

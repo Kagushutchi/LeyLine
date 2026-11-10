@@ -11,6 +11,9 @@ export interface SuscripcionDTO {
   cajaMensualId: string;
   categoria: CategoriaClub;
   estado: EstadoSuscripcion;
+  /** Pausada porque el proveedor rechazó un cobro: se reactiva sola al cobrarse. */
+  pausadaPorPago?: boolean;
+  paymentProvider?: string | null;
   montoMensual: number;
   fechaInicio?: string;
   proximoCobro?: string;
@@ -49,6 +52,15 @@ export const suscripcionesService = {
 
   async pause(id: string): Promise<ApiResponse<SuscripcionDTO>> {
     return apiClient.patch(`/suscripciones/${id}/pausar`);
+  },
+
+  async resume(id: string): Promise<ApiResponse<SuscripcionDTO>> {
+    return apiClient.patch(`/suscripciones/${id}/reanudar`);
+  },
+
+  /** URL del portal del proveedor para actualizar la tarjeta y ver facturas. */
+  async billingPortal(id: string): Promise<ApiResponse<{ url: string }>> {
+    return apiClient.post(`/suscripciones/${id}/portal`);
   },
 
   async cancel(id: string): Promise<ApiResponse<SuscripcionDTO>> {

@@ -1,4 +1,4 @@
-import { DataSource } from 'typeorm';
+import { DataSource, In } from 'typeorm';
 import { SolicitudSuscripcion } from './solicitud.entity';
 import { MensajeOutbox } from './outbox.entity';
 import { serializeSqlite } from '../domain/sqlite-serialization';
@@ -28,7 +28,8 @@ export async function scheduleRetry(db: DataSource, requestId: string, messageId
         }).execute();
       if (locked.affected !== 1) return 'stale';
     }
-    const where = { id: requestId, estado: 'pendiente', intentosProcesamiento: attempt };
+    // 'procesando' persiste sólo cuando hay cobro: un proceso caído tras reclamar la solicitud se recupera igual que 'pendiente'.
+    const where = { id: requestId, estado: In(['pendiente', 'procesando']), intentosProcesamiento: attempt };
     const updated = await requests.update(where, {
       intentosProcesamiento: next, estado: exhausted ? 'fallido' : 'pendiente', updatedAt: new Date((policy.now ?? Date.now)()),
     });
@@ -62,11 +63,11 @@ export class RetryReconciler {
   private async reconcileOne(): Promise<'idle' | 'scheduled' | 'exhausted'> {
     const cutoff = new Date((this.policy.now ?? Date.now)() - this.policy.staleAfterMs);
     const message = await this.db.getRepository(MensajeOutbox).createQueryBuilder('message')
-      .innerJoin(SolicitudSuscripcion, 'request', 'message.solicitudId = request.id AND request.estado = :pending', { pending: 'pendiente' })
-      .where('message.estado = :published AND message.publishedAt IS NOT NULL AND message.publishedAt <= :cutoff', { published: 'publicado', cutoff: cutoff.getTime() })
+      .innerJoin(SolicitudSuscripcion, 'request', 'message.solicitudId = request.id AND request.estado IN (:...open)', { open: ['pendiente', 'procesando'] })
+      .where('message.tipo = :type AND message.estado = :published AND message.publishedAt IS NOT NULL AND message.publishedAt <= :cutoff', { type: 'subscription.requested', published: 'publicado', cutoff: cutoff.getTime() })
       .orderBy('message.publishedAt', 'ASC').getOne();
     if (!message) return 'idle';
-    const candidate = await this.db.getRepository(SolicitudSuscripcion).findOneBy({ id: message.solicitudId, estado: 'pendiente' });
+    const candidate = await this.db.getRepository(SolicitudSuscripcion).findOneBy({ id: message.solicitudId, estado: In(['pendiente', 'procesando']) });
     if (!candidate) return 'idle';
     const result = await scheduleRetry(this.db, candidate.id, message.id, candidate.intentosProcesamiento, this.policy, cutoff);
     return result === 'stale' ? 'idle' : result;

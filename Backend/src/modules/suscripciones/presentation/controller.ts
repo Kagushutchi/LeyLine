@@ -4,6 +4,8 @@ import { GetSuscripcionById } from '../domain/useCase/get-suscripcion-by-id';
 import { GetSuscripcionesBySuscriptor } from '../domain/useCase/get-suscripciones-by-suscriptor';
 import UpdateSuscripcion from '../domain/useCase/update-suscripcion';
 import PauseSuscripcion from '../domain/useCase/pause-suscripcion';
+import ResumeSuscripcion from '../domain/useCase/resume-suscripcion';
+import BillingPortal from '../domain/useCase/billing-portal';
 import CancelSuscripcion from '../domain/useCase/cancel-suscripcion';
 import DeleteSuscripcion from '../domain/useCase/delete-suscripcion';
 
@@ -39,6 +41,16 @@ export default class SuscripcionesController {
 
   async pauseSuscripcion(id: string | number, tenantId?: string): Promise<any> {
     const useCase = new PauseSuscripcion();
+    return await useCase.execute(id, tenantId);
+  }
+
+  async resumeSuscripcion(id: string | number, tenantId?: string): Promise<any> {
+    const useCase = new ResumeSuscripcion();
+    return await useCase.execute(id, tenantId);
+  }
+
+  async billingPortal(id: string | number, tenantId?: string): Promise<any> {
+    const useCase = new BillingPortal();
     return await useCase.execute(id, tenantId);
   }
 

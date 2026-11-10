@@ -13,17 +13,19 @@ Esta lista es contra `docs/TP.md` (requisitos de la Segunda Parte) y el código 
 
 **Lo que falta es lo de abajo.**
 
-## Pendiente 1 — Stripe como API externa
+## Pendiente 1 — Stripe como API externa (hecho y validado en modo test)
 
-Hoy existe sólo `Backend/src/common/patterns/strategies/payment-strategy.interface.ts`: la interfaz `IPaymentStrategy` (Strategy pattern), sin ninguna clase que la implemente y sin ningún lugar del código que la use.
+Implementado en `feature/pagos-stripe` y probado contra Stripe real (sandbox): checkout por la cola, activación por webhook, pausar,
+reanudar y cancelar, todo también en Docker. Detalle, garantías y configuración en `docs/pagos-recurrentes.md`.
 
-**Tareas:**
-- [ ] Agregar dependencia `stripe` (SDK oficial) a `Backend/package.json`.
-- [ ] Implementar `StripePaymentStrategy` (en `common/patterns/strategies/` o un módulo `pagos/`) que cumpla `IPaymentStrategy`: `createSubscriptionPlan`, `processRecurringPayment`, `cancelSubscription`.
-- [ ] Credenciales/config: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` en `.env.example` y `env.config.ts`.
-- [ ] Enganchar el cobro recurrente en el flujo de alta de suscripción (hoy `CreateSuscripcion` solo verifica stock, no cobra).
-- [ ] Manejo de errores/estado: qué pasa si Stripe rechaza el pago (código HTTP, estado de la suscripción).
-- [ ] (Opcional pero pedido por la cátedra en el Integrador) Webhook de Stripe para eventos asíncronos de pago, publicado como evento de dominio hacia la cola existente.
+**Resuelto después de la primera versión:** alta sin pago del suscriptor bloqueada, conversión de pesos a la moneda de cobro, reproceso
+de eventos de pago perdidos, recuperación de suscripciones pausadas por un cobro rechazado, checkout con vencimiento y descartable,
+reutilización del cliente y portal de facturación, y documentación en OpenAPI.
+
+**Límites conocidos:**
+- El tipo de cambio es fijo (`PAYMENT_FX_RATE`); no se consulta una cotización en vivo.
+- El segundo cobro mensual con Stripe real no se ejercitó (sólo con eventos simulados); haría falta un reloj de pruebas de Stripe.
+- En producción el secreto del webhook sale de un endpoint creado en el dashboard, no del Stripe CLI.
 
 ## Pendiente 2 — Componente de IA (recomendador)
 
@@ -42,7 +44,7 @@ Hoy existe sólo `Backend/src/common/patterns/strategies/payment-strategy.interf
 
 - [ ] TODO 1 — Crear registro de suscripción (reusar `CreateSuscripcion`).
 - [ ] TODO 2 — Validar inventario vía SOAP (reusar `InventarioSoapClient.consultarInventario`; ya existe, solo falta inyectarlo).
-- [ ] TODO 3 — Ejecutar cobro recurrente vía Strategy → bloqueado por el Pendiente 1 (Stripe).
+- [ ] TODO 3 — Ejecutar cobro recurrente vía Strategy → ya disponible (Pendiente 1); el cobro hoy ocurre en `ProcesarSolicitud.startPayment`.
 - [ ] TODO 4 — Emitir evento de dominio para la orden de empaque → usar el `EventDispatcher`/Observer existente (hoy definido pero sin ningún `subscribe`/`dispatch` real en el código) o, mejor, publicar directamente a la cola RabbitMQ ya armada en `solicitudes-suscripcion`.
 
 ## Cabos sueltos menores

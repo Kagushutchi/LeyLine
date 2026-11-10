@@ -47,6 +47,8 @@ export const openapiDocument = {
     { name: 'Suscripciones', description: 'Membresías mensuales y cambios de estado' },
     { name: 'Cajas mensuales', description: 'Cajas temáticas y recomendaciones' },
     { name: 'Productos', description: 'Catálogo de vinos, cafés y cervezas' },
+    { name: 'Solicitudes de suscripción', description: 'Alta de membresías por cola, con pago (requiere SUBSCRIPTION_REQUESTS_ENABLED)' },
+    { name: 'Pagos', description: 'Webhooks del proveedor de pago' },
   ],
   paths: {
     '/api/health': {
@@ -233,6 +235,109 @@ export const openapiDocument = {
           200: jsonResponse('Suscripción pausada', 'SuscripcionResponse'),
           400: errorResponse('La suscripción no está activa'),
           404: errorResponse('Suscripción no encontrada'),
+        },
+      },
+    },
+    '/api/suscripciones/{id}/reanudar': {
+      parameters: [uuidParam('id', 'ID de la suscripción')],
+      put: {
+        tags: ['Suscripciones'],
+        summary: 'Reanudar una suscripción pausada (retoma el cobro en el proveedor de pago)',
+        responses: {
+          200: jsonResponse('Suscripción reanudada', 'SuscripcionResponse'),
+          400: errorResponse('La suscripción no está pausada'),
+          404: errorResponse('Suscripción no encontrada'),
+          502: errorResponse('El proveedor de pago no pudo reanudar la suscripción'),
+        },
+      },
+      patch: {
+        tags: ['Suscripciones'],
+        summary: 'Reanudar una suscripción pausada (alias PATCH)',
+        responses: {
+          200: jsonResponse('Suscripción reanudada', 'SuscripcionResponse'),
+          400: errorResponse('La suscripción no está pausada'),
+          404: errorResponse('Suscripción no encontrada'),
+          502: errorResponse('El proveedor de pago no pudo reanudar la suscripción'),
+        },
+      },
+    },
+    '/api/suscripciones/{id}/portal': {
+      parameters: [uuidParam('id', 'ID de la suscripción')],
+      post: {
+        tags: ['Suscripciones'],
+        summary: 'Abrir el portal de facturación del proveedor de pago',
+        description: 'Devuelve la URL donde el cliente actualiza su tarjeta y consulta sus facturas.',
+        responses: {
+          200: jsonResponse('URL del portal', 'PortalResponse', { status: 'success', data: { url: 'https://billing.stripe.com/p/session/...' } }),
+          400: errorResponse('La suscripción no tiene un medio de pago asociado'),
+          502: errorResponse('El proveedor de pago no pudo abrir el portal'),
+          503: errorResponse('El proveedor de pago no está disponible'),
+        },
+      },
+    },
+    '/api/solicitudes-suscripcion': {
+      post: {
+        tags: ['Solicitudes de suscripción'],
+        summary: 'Solicitar una membresía (se procesa por cola y se paga en el proveedor)',
+        description:
+          'Responde 202 con la solicitud en `pendiente`. El worker crea el checkout del proveedor y la solicitud pasa a ' +
+          '`esperando_pago` con su `checkoutUrl`; al confirmarse el pago por webhook pasa a `completado`. ' +
+          'El precio de la caja está en pesos y el proveedor cobra en su moneda al tipo de cambio configurado (`cobro`). ' +
+          'Requiere el header `Idempotency-Key`.',
+        parameters: [{ name: 'Idempotency-Key', in: 'header', required: true, schema: { type: 'string', maxLength: 128 } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { $ref: '#/components/schemas/SolicitudRequest' } } },
+        },
+        responses: {
+          202: jsonResponse('Solicitud recibida', 'SolicitudResponse'),
+          400: errorResponse('Datos inválidos'),
+          409: errorResponse('PRICE_CHANGED, ALREADY_SUBSCRIBED, REQUEST_IN_PROGRESS o IDEMPOTENCY_KEY_CONFLICT'),
+        },
+      },
+      get: {
+        tags: ['Solicitudes de suscripción'],
+        summary: 'Listar las solicitudes del suscriptor autenticado',
+        responses: { 200: jsonResponse('Solicitudes', 'SolicitudListResponse') },
+      },
+    },
+    '/api/solicitudes-suscripcion/{id}': {
+      parameters: [uuidParam('id', 'ID de la solicitud')],
+      get: {
+        tags: ['Solicitudes de suscripción'],
+        summary: 'Consultar una solicitud',
+        description: 'Con `?waitMs=N` (máx. 5000) la respuesta espera hasta que la solicitud deje de estar en curso (`esperando_pago` o un estado terminal).',
+        parameters: [{ name: 'waitMs', in: 'query', schema: { type: 'integer', minimum: 0, maximum: 5000 } }],
+        responses: { 200: jsonResponse('Solicitud', 'SolicitudResponse'), 404: errorResponse('Solicitud no encontrada') },
+      },
+    },
+    '/api/solicitudes-suscripcion/{id}/cancelar': {
+      parameters: [uuidParam('id', 'ID de la solicitud')],
+      post: {
+        tags: ['Solicitudes de suscripción'],
+        summary: 'Descartar un pedido que espera el pago',
+        description: 'Invalida el checkout en el proveedor y deja la solicitud en `expirado`, liberando la caja. Idempotente.',
+        responses: {
+          200: jsonResponse('Solicitud descartada', 'SolicitudResponse'),
+          404: errorResponse('Solicitud no encontrada'),
+          409: errorResponse('El pedido no espera el pago, o el pago ya se completó'),
+          503: errorResponse('El proveedor de pago no está disponible'),
+        },
+      },
+    },
+    '/api/webhooks/payments': {
+      post: {
+        tags: ['Pagos'],
+        summary: 'Webhook del proveedor de pago activo',
+        description:
+          'Sin JWT: se autentica con la firma del proveedor (`Stripe-Signature` o `X-Fake-Signature`) sobre el cuerpo crudo. ' +
+          'Verifica, normaliza y encola el evento (`payment.event`); responde 200 enseguida. ' +
+          'Eventos: invoice.paid, invoice.payment_failed, customer.subscription.deleted, checkout.session.expired. ' +
+          'Sólo se monta con PAYMENT_PROVIDER distinto de `none`.',
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object' } } } },
+        responses: {
+          200: { description: 'Evento recibido (también los duplicados y los que no interesan)' },
+          400: errorResponse('Firma inválida'),
         },
       },
     },
@@ -802,6 +907,43 @@ export const openapiDocument = {
           fechaInicio: { type: 'string', format: 'date' },
           proximoCobro: { type: 'string', format: 'date' },
         },
+      },
+      PortalResponse: {
+        type: 'object',
+        properties: { status: { type: 'string', example: 'success' }, data: { type: 'object', properties: { url: { type: 'string' } } } },
+      },
+      SolicitudRequest: {
+        type: 'object',
+        required: ['cajaMensualId', 'precioConfirmadoCentavos'],
+        properties: {
+          cajaMensualId: { type: 'string', format: 'uuid' },
+          precioConfirmadoCentavos: { type: 'integer', description: 'Precio de la caja en centavos de la moneda base (pesos)', example: 650000 },
+        },
+      },
+      Solicitud: {
+        type: 'object',
+        properties: {
+          id: { type: 'string', format: 'uuid' },
+          cajaMensualId: { type: 'string', format: 'uuid' },
+          estado: { type: 'string', enum: ['pendiente', 'procesando', 'esperando_pago', 'completado', 'rechazado', 'fallido', 'expirado'] },
+          suscripcionId: { type: 'string', format: 'uuid', nullable: true },
+          checkoutUrl: { type: 'string', description: 'Sólo en `esperando_pago`' },
+          cobro: {
+            type: 'object',
+            description: 'Importe que cobra el proveedor (convertido de pesos al tipo de cambio configurado)',
+            properties: { monto: { type: 'string', example: '5.42' }, moneda: { type: 'string', example: 'USD' } },
+          },
+          createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time' },
+        },
+      },
+      SolicitudResponse: {
+        type: 'object',
+        properties: { status: { type: 'string', example: 'success' }, data: { $ref: '#/components/schemas/Solicitud' } },
+      },
+      SolicitudListResponse: {
+        type: 'object',
+        properties: { status: { type: 'string', example: 'success' }, data: { type: 'array', items: { $ref: '#/components/schemas/Solicitud' } } },
       },
       SuscripcionResponse: {
         type: 'object',

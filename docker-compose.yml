@@ -1,3 +1,18 @@
+# Entorno completo: `docker compose up --build` levanta infraestructura, API, worker, seed, frontend y Stripe.
+# La configuración sale de Backend/.env (copiar de Backend/.env.example); acá sólo se pisa lo que cambia dentro de la red de Docker.
+
+x-backend-env: &backend-env
+  env_file: ./Backend/.env
+  environment: &backend-overrides
+    DB_TYPE: postgres
+    DB_HOST: postgres
+    DB_PORT: "5432"
+    RABBITMQ_URL: amqp://${RABBITMQ_USER:-clubcurator}:${RABBITMQ_PASSWORD:-change-me-local-only}@rabbitmq:5672
+    # Dentro de la red de compose la API y el worker corren siempre con la cola y las solicitudes habilitadas.
+    QUEUE_RUNTIME_ENABLED: "true"
+    SUBSCRIPTION_REQUESTS_ENABLED: "true"
+    PORT: "3000"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -34,6 +49,70 @@ services:
       interval: 10s
       timeout: 10s
       retries: 5
+
+  api:
+    build: ./Backend
+    container_name: clubcurator_api
+    restart: on-failure
+    <<: *backend-env
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  # Relay del outbox, consumidores y reconciliador. Espera a la API para no sincronizar el esquema en paralelo.
+  worker:
+    build: ./Backend
+    container_name: clubcurator_worker
+    restart: on-failure
+    <<: *backend-env
+    command: ["node", "dist/workers/queue-worker.js"]
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Carga los datos de ejemplo una sola vez: si ya hay productos, el seed aborta sin duplicar y el contenedor termina.
+  seed:
+    build: ./Backend
+    container_name: clubcurator_seed
+    restart: "no"
+    <<: *backend-env
+    command: ["node", "dist/seeds/seed.js"]
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    build: ./frontend
+    container_name: clubcurator_web
+    restart: unless-stopped
+    environment:
+      # Lo consume el navegador (en tu máquina), por eso apunta a localhost y no al servicio `api`.
+      VITE_API_URL: http://localhost:3000/api
+      VITE_SUBSCRIPTION_REQUESTS_ENABLED: "true"
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/src:/app/src
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Reenvía los webhooks de Stripe a la API. Termina sin error si PAYMENT_PROVIDER no es `stripe`.
+  stripe:
+    image: stripe/stripe-cli:latest
+    container_name: clubcurator_stripe
+    restart: "no"
+    env_file: ./Backend/.env
+    entrypoint: ["/bin/sh", "/scripts/docker-stripe.sh"]
+    volumes:
+      - ./scripts/docker-stripe.sh:/scripts/docker-stripe.sh:ro
+    depends_on:
+      api: { condition: service_healthy }
 
 volumes:
   postgres_data:

@@ -15,12 +15,25 @@ import cajasMensualesRouter from './modules/cajas-mensuales/presentation/cajas-m
 import productosRouter from './modules/productos/presentation/productos-router';
 import { createSolicitudesRouter } from './modules/solicitudes-suscripcion/presentation/solicitudes-router';
 import { setupInventarioSoap } from './modules/inventario/soap/inventario-server';
+import { createPaymentWebhookRouter } from './modules/pagos/presentation/payment-webhook-router';
+import { createPaymentStrategy } from './common/patterns/strategies/payment-strategy.registry';
+import { IPaymentStrategy } from './common/patterns/strategies/payment-strategy.interface';
 
-export const createApp = async (): Promise<Application> => {
+export interface AppOptions {
+  /** Estrategia de pago a usar; por defecto la que indica PAYMENT_PROVIDER (null = pagos deshabilitados). */
+  payments?: IPaymentStrategy | null;
+}
+
+export const createApp = async (options: AppOptions = {}): Promise<Application> => {
   const app: Application = express();
+  const payments = options.payments !== undefined ? options.payments : createPaymentStrategy();
 
   // Middlewares globales
   app.use(cors({ origin: envConfig.corsOrigin }));
+  // El webhook de pagos necesita el cuerpo crudo para verificar la firma: va antes de express.json().
+  if (payments) {
+    app.use('/api/webhooks/payments', express.raw({ type: '*/*', limit: '1mb' }), createPaymentWebhookRouter(getDataSource(), payments));
+  }
   app.use(express.json());
   app.use(loggerMiddleware);
 
@@ -49,7 +62,7 @@ export const createApp = async (): Promise<Application> => {
   app.use('/api/productos', productosRouter);
   // Only accept new requests when a worker/relay can process them (see QUEUE_RUNTIME_ENABLED).
   if (process.env.SUBSCRIPTION_REQUESTS_ENABLED === 'true') {
-    app.use('/api/solicitudes-suscripcion', createSolicitudesRouter(getDataSource()));
+    app.use('/api/solicitudes-suscripcion', createSolicitudesRouter(getDataSource(), payments));
   }
 
   // Servicio SOAP de inventario (contrato en docs/soap/inventario.wsdl)

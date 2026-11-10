@@ -10,6 +10,7 @@ const { MensajeOutbox } = require('../dist/modules/solicitudes-suscripcion/infra
 const { MensajeInbox } = require('../dist/modules/solicitudes-suscripcion/infrastructure/inbox.entity');
 const { AceptarSolicitud } = require('../dist/modules/solicitudes-suscripcion/domain/aceptar-solicitud');
 const { AddSubscriptionRequests1797000000000 } = require('../dist/migrations/1797000000000-AddSubscriptionRequests');
+const { AddPaymentProvider1800000000000 } = require('../dist/migrations/1800000000000-AddPaymentProvider');
 const { entities } = require('../dist/common/patterns/factory/entities');
 const { CajaMensual } = require('../dist/modules/cajas-mensuales/infrastructure/caja-mensual.entity');
 
@@ -30,6 +31,7 @@ async function setup(t) {
   await runner.dropTable('mensajes_outbox');
   await runner.dropTable('solicitudes_suscripcion');
   await new AddSubscriptionRequests1797000000000().up(runner);
+  await new AddPaymentProvider1800000000000().up(runner);
   await seedBoxes(db);
   t.after(async () => { await runner.release(); await db.destroy(); });
   return { db, runner, service: new AceptarSolicitud(db) };

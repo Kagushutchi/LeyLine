@@ -15,6 +15,13 @@ export class SolicitudSuscripcion {
   @Column({ type: 'int', default: 0 }) intentosProcesamiento: number;
   @Column({ type: 'varchar', length: 20, default: 'pendiente' }) estado: string;
   @Column({ type: 'varchar', length: 100, nullable: true }) suscripcionId: string | null;
+  @Column({ type: 'varchar', length: 30, nullable: true }) paymentProvider: string | null;
+  @Column({ type: 'varchar', length: 100, nullable: true }) providerSessionId: string | null;
+  @Column({ type: 'text', nullable: true }) checkoutUrl: string | null;
+  /** Importe cobrado por el proveedor (en centavos de `chargeCurrency`) y tipo de cambio aplicado, para auditoría. */
+  @Column({ type: 'int', nullable: true }) chargeAmountCents: number | null;
+  @Column({ type: 'varchar', length: 10, nullable: true }) chargeCurrency: string | null;
+  @Column({ type: 'varchar', length: 32, nullable: true }) fxRate: string | null;
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 }

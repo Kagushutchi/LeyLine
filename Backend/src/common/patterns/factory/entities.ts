@@ -10,7 +10,12 @@ import { SolicitudSuscripcion } from "../../../modules/solicitudes-suscripcion/i
 import { MensajeOutbox } from "../../../modules/solicitudes-suscripcion/infrastructure/outbox.entity";
 import { MensajeInbox } from "../../../modules/solicitudes-suscripcion/infrastructure/inbox.entity";
 
+import { PlanPago } from "../../../modules/pagos/infrastructure/plan-pago.entity";
+import { ClientePago } from "../../../modules/pagos/infrastructure/cliente-pago.entity";
+
 export const entities = [
+    PlanPago,
+    ClientePago,
     Tenant,
     User,
     Suscriptor,

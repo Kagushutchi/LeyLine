@@ -2,11 +2,14 @@ import { Suscripcion } from "../../infrastructure/suscripcion.entity";
 import { SuscripcionRepository } from "../../infrastructure/suscripcion-repository";
 import { AppError } from "../../../../common/errors/app-error";
 import { assertTenantOwnership } from "../../../../common/utils/tenant-ownership";
+import { IPaymentStrategy } from "../../../../common/patterns/strategies/payment-strategy.interface";
+import { createPaymentStrategy } from "../../../../common/patterns/strategies/payment-strategy.registry";
+import { syncWithProvider } from "../provider-sync";
 
 export default class PauseSuscripcion {
   private repository: SuscripcionRepository;
 
-  constructor() {
+  constructor(private readonly payments: IPaymentStrategy | null = createPaymentStrategy()) {
     this.repository = new SuscripcionRepository();
   }
 
@@ -20,7 +23,9 @@ export default class PauseSuscripcion {
       throw new AppError(`Solo se pueden pausar suscripciones activas (estado actual: ${suscripcion.estado})`, 400);
     }
 
-    const updated = await this.repository.update(id, { estado: 'pausada' });
+    await syncWithProvider(suscripcion, this.payments, 'pauseSubscription');
+
+    const updated = await this.repository.update(id, { estado: 'pausada', pausadaPorPago: false });
     if (!updated) throw new AppError(`Suscripción con ID ${id} no encontrada`, 404);
     return updated;
   }

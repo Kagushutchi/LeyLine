@@ -5,6 +5,12 @@ import { readQueueConfig } from '../../../common/messaging/queue-config';
 import { OutboxRelay } from './outbox-relay';
 import { ProcesarSolicitud } from '../domain/procesar-solicitud';
 import { RetryReconciler } from './retry-reconciler';
+import { createMessageRouter } from '../../../common/messaging/message-router';
+import { createPaymentStrategy } from '../../../common/patterns/strategies/payment-strategy.registry';
+import { envConfig } from '../../../config/env.config';
+import { ProcesarPago } from '../../pagos/domain/procesar-pago';
+import { PaymentEventReconciler } from '../../pagos/infrastructure/payment-event-reconciler';
+import { assertFxConfigured } from '../../pagos/domain/currency-converter';
 
 // Rollout gate: the operator sets QUEUE_RUNTIME_ENABLED=true only after the
 // real-broker/database validation in docs/pendientes-cierre-colas-suscripciones.md.
@@ -46,10 +52,23 @@ export async function startQueueWorker(env: NodeJS.ProcessEnv = process.env): Pr
       reconnectDelayMs: config.reconnectDelayMs,
       onFailure: () => process.stderr.write('RabbitMQ connection failed\n'),
     });
-    const processor = new ProcesarSolicitud(db);
-    await transport.subscribe((message) => processor.execute(message));
+    const strategy = createPaymentStrategy();
+    // Falla al arrancar (no al primer cobro) si hay que convertir de moneda y falta el tipo de cambio.
+    if (strategy) assertFxConfigured(envConfig.payments.baseCurrency, envConfig.payments.currency, envConfig.payments.fxRate);
+    const processor = new ProcesarSolicitud(db, undefined, strategy
+      ? { strategy, baseCurrency: envConfig.payments.baseCurrency, currency: envConfig.payments.currency, fxRate: envConfig.payments.fxRate, successUrl: envConfig.payments.successUrl, cancelUrl: envConfig.payments.cancelUrl, checkoutTtlMinutes: envConfig.payments.checkoutTtlMinutes }
+      : null);
+    const payments = new ProcesarPago(db);
+    await transport.subscribe(createMessageRouter({
+      'subscription.requested': (message) => processor.execute(message),
+      'payment.event': (message) => payments.execute(message),
+    }));
     const relay = new OutboxRelay(db, transport, { batchSize: config.relayBatchSize });
-    const stopSchedules = startQueueSchedules(relay, new RetryReconciler(db), config.pollIntervalMs);
+    const requestReconciler = new RetryReconciler(db);
+    const paymentReconciler = new PaymentEventReconciler(db);
+    // Un solo ciclo recupera tanto solicitudes colgadas como eventos de pago que no llegaron a procesarse.
+    const reconciler = { runOnce: async () => { await requestReconciler.runOnce(); await paymentReconciler.runOnce(); } };
+    const stopSchedules = startQueueSchedules(relay, reconciler, config.pollIntervalMs);
     let shutdown: Promise<void> | undefined;
     return () => {
       if (!shutdown) shutdown = (async () => {

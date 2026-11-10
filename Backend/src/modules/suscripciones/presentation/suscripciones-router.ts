@@ -6,6 +6,7 @@ import { User } from "../../auth/infrastructure/user.entity";
 import { CajaMensualRepository } from "../../cajas-mensuales/infrastructure/caja-mensual-repository";
 import SuscripcionesController from "./controller";
 import { validateBody, validateParams } from "../../../common/middlewares/validation.middleware";
+import { envConfig } from "../../../config/env.config";
 import { updateSuscripcionSchema, suscripcionIdParamSchema, suscriptorIdParamSchema } from "./suscripcion.schema";
 
 /**
@@ -115,6 +116,11 @@ class SuscripcionesRouter {
         if (caja.tenantId !== tenantId) throw new AppError('Caja mensual no encontrada', 404);
         payload = { ...body, tenantId };
       } else {
+        // Con pagos habilitados el alta del suscriptor pasa por la solicitud (checkout): este camino crearía la
+        // membresía activa sin cobrar. Queda sólo para altas administrativas.
+        if (envConfig.payments.provider !== 'none') {
+          throw new AppError('Para suscribirte usá una solicitud de suscripción (incluye el pago)', 403);
+        }
         // Suscriptor: solo para sí mismo, con tenant y precio tomados de la caja.
         payload = {
           cajaMensualId: caja.id, suscriptorId: await this.linkedSuscriptorId(req),
@@ -129,12 +135,23 @@ class SuscripcionesRouter {
       await this.authorizedSuscripcion(req, req.params.id, true);
       res.status(200).json({ status: 'success', data: await this.controller.pauseSuscripcion(req.params.id, this.tenantOf(req)) });
     });
+    const resume = wrap(async (req, res) => {
+      await this.authorizedSuscripcion(req, req.params.id, true);
+      res.status(200).json({ status: 'success', data: await this.controller.resumeSuscripcion(req.params.id, this.tenantOf(req)) });
+    });
+    const portal = wrap(async (req, res) => {
+      await this.authorizedSuscripcion(req, req.params.id, true);
+      res.status(200).json({ status: 'success', data: await this.controller.billingPortal(req.params.id, this.tenantOf(req)) });
+    });
+    router.post(`${this.BASE_URL}:id/portal`, validateParams(suscripcionIdParamSchema), portal);
     const cancel = wrap(async (req, res) => {
       await this.authorizedSuscripcion(req, req.params.id, true);
       res.status(200).json({ status: 'success', data: await this.controller.cancelSuscripcion(req.params.id, this.tenantOf(req)) });
     });
     router.put(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), pause);
     router.patch(`${this.BASE_URL}:id/pausar`, validateParams(suscripcionIdParamSchema), pause);
+    router.put(`${this.BASE_URL}:id/reanudar`, validateParams(suscripcionIdParamSchema), resume);
+    router.patch(`${this.BASE_URL}:id/reanudar`, validateParams(suscripcionIdParamSchema), resume);
     router.put(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), cancel);
     router.patch(`${this.BASE_URL}:id/cancelar`, validateParams(suscripcionIdParamSchema), cancel);
 

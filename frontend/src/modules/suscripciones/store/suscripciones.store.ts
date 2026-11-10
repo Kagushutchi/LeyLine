@@ -94,6 +94,25 @@ export const useSuscripcionesStore = defineStore('suscripciones', () => {
     }
   };
 
+  const resumeSuscripcion = async (id: string) => {
+    loading.value = true;
+    error.value = null;
+    try {
+      const response = await suscripcionesService.resume(id);
+      const index = suscripciones.value.findIndex((s) => s.id === id);
+      if (index !== -1 && response.data) {
+        suscripciones.value[index] = { ...suscripciones.value[index], ...response.data, estado: 'activa' };
+      }
+      return response.data;
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { message?: string } }; message?: string };
+      error.value = e.response?.data?.message || e.message || 'Error al reanudar suscripción';
+      throw err;
+    } finally {
+      loading.value = false;
+    }
+  };
+
   const cancelSuscripcion = async (id: string) => {
     loading.value = true;
     error.value = null;
@@ -138,6 +157,7 @@ export const useSuscripcionesStore = defineStore('suscripciones', () => {
     createSuscripcion,
     updateSuscripcion,
     pauseSuscripcion,
+    resumeSuscripcion,
     cancelSuscripcion,
     deleteSuscripcion,
   };

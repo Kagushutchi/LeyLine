@@ -1,0 +1,12 @@
+node_modules
+dist
+test
+tests
+scripts
+.env
+.env.*
+!.env.example
+*.sqlite
+*.sqlite3
+clubcurator_db
+*.log

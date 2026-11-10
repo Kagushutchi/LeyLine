@@ -1,7 +1,8 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryColumn } from 'typeorm';
 
 @Entity('mensajes_outbox')
-@Index('uq_outbox_solicitud', ['solicitudId'], { unique: true })
+// Un único mensaje `subscription.requested` por solicitud; los eventos de pago (`payment.event`) pueden ser varios.
+@Index('uq_outbox_solicitud', ['solicitudId'], { unique: true, where: `"tipo" = 'subscription.requested'` })
 @Index('idx_outbox_pendiente', ['createdAt'], { where: `"estado" = 'pendiente'` })
 export class MensajeOutbox {
   @PrimaryColumn({ type: 'varchar', length: 36 }) id: string;

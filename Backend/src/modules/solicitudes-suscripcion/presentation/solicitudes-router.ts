@@ -6,20 +6,26 @@ import { User } from '../../auth/infrastructure/user.entity';
 import { Suscriptor } from '../../suscriptores/infrastructure/suscriptor.entity';
 import { AceptarSolicitud, SolicitudConflictError } from '../domain/aceptar-solicitud';
 import { SolicitudSuscripcion } from '../infrastructure/solicitud.entity';
+import { DescartarSolicitud } from '../domain/descartar-solicitud';
+import { IPaymentStrategy } from '../../../common/patterns/strategies/payment-strategy.interface';
 
 const publicRequest = (request: SolicitudSuscripcion) => ({
   id: request.id, cajaMensualId: request.cajaMensualId,
   estado: request.estado, suscripcionId: request.suscripcionId,
+  ...(request.checkoutUrl ? { checkoutUrl: request.checkoutUrl } : {}),
+  ...(request.chargeAmountCents != null && request.chargeCurrency
+    ? { cobro: { monto: (request.chargeAmountCents / 100).toFixed(2), moneda: request.chargeCurrency.toUpperCase() } } : {}),
   createdAt: request.createdAt, updatedAt: request.updatedAt,
 });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_WAIT_MS = 5000, WAIT_STEP_MS = 75, MAX_WAITERS = 200;
 let waiters = 0;
-const isTerminalState = (state: string) => ['completado', 'rechazado', 'fallido'].includes(state);
+// El long-poll también corta en 'esperando_pago': el cliente necesita la URL de checkout.
+const isTerminalState = (state: string) => ['completado', 'rechazado', 'fallido', 'expirado', 'esperando_pago'].includes(state);
 
 /** Mounted only when SUBSCRIPTION_REQUESTS_ENABLED=true; not the relay and worker are operational. */
-export function createSolicitudesRouter(db: DataSource): Router {
+export function createSolicitudesRouter(db: DataSource, payments: IPaymentStrategy | null = null): Router {
   const router = Router();
   router.use(authMiddleware);
 
@@ -73,6 +79,15 @@ export function createSolicitudesRouter(db: DataSource): Router {
         where: principal, order: { createdAt: 'DESC' },
       });
       res.json({ status: 'success', data: requests.map(publicRequest) });
+    } catch (error) { next(error); }
+  });
+
+  router.post('/:id/cancelar', async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const principal = await identity(req);
+      if (!UUID.test(req.params.id)) throw new AppError('Solicitud no encontrada', 404);
+      const request = await new DescartarSolicitud(db, payments).execute({ requestId: req.params.id, ...principal });
+      res.json({ status: 'success', data: publicRequest(request) });
     } catch (error) { next(error); }
   });
 

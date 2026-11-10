@@ -58,8 +58,8 @@ El módulo `inventario` agrega dos carpetas específicas: `soap/` (servidor, WSD
 - **Propósito**: Construye y configura dinámicamente la **única** instancia del `DataSource` de TypeORM según las variables de entorno (`DB_TYPE=sqlite` o `DB_TYPE=postgres`). Los repositorios acceden a esa conexión mediante `getDataSource()`, evitando crear conexiones duplicadas. Permite cambiar entre SQLite para desarrollo rápido local y PostgreSQL para entornos Docker o producción con una sola variable, sin modificar código fuente.
 
 ### 3.3. Patrón Strategy
-- **Ubicación**: `Backend/src/common/patterns/strategies/payment-strategy.interface.ts`.
-- **Propósito**: Define una interfaz contractual unificada (`IPaymentStrategy`) para operaciones de facturación recurrente. Permite conectar indistintamente proveedores como Stripe o MercadoPago Subscriptions en etapas posteriores del TP sin acoplar el flujo de suscripciones a un SDK externo específico.
+- **Ubicación**: `Backend/src/common/patterns/strategies/` (`payment-strategy.interface.ts`, `stripe-payment.strategy.ts`, `fake-payment.strategy.ts`, `payment-strategy.registry.ts`).
+- **Propósito**: `IPaymentStrategy` es el contrato único de cobro recurrente (`createSubscriptionPlan`, `startSubscription`, `cancelSubscription`, `parseWebhook`). `StripePaymentStrategy` (Stripe Billing + Checkout) y `FakePaymentStrategy` (demo/tests) son intercambiables; el proveedor se elige con `PAYMENT_PROVIDER` y el dominio nunca ve tipos ni eventos nativos del proveedor. Agregar MercadoPago implica una clase nueva y una línea en el registro. Flujo completo, estados y pruebas en `docs/pagos-recurrentes.md`.
 
 ### 3.4. Patrón Observer (Event-Driven)
 - **Ubicación**: `Backend/src/common/patterns/events/event-dispatcher.ts` e `IDomainEvent`.

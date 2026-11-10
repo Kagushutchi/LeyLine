@@ -33,7 +33,7 @@
         <div v-for="sub in misSuscripciones" :key="sub.id" class="sub-card">
           <div class="sub-header">
             <span class="badge" :class="sub.estado === 'activa' ? 'badge-success' : 'badge-warning'">
-              {{ sub.estado.toUpperCase() }}
+              {{ sub.pausadaPorPago ? 'PAUSADA POR PAGO' : sub.estado.toUpperCase() }}
             </span>
             <span class="sub-cat">{{ formatCategoria(sub.categoria) }}</span>
           </div>
@@ -43,9 +43,12 @@
           </div>
           <div class="sub-meta">
             <span v-if="sub.proximoCobro" class="meta-item">
-              📅 Próximo cobro: {{ new Date(sub.proximoCobro).toLocaleDateString('es-AR') }}
+              📅 Próximo cobro: {{ formatDay(sub.proximoCobro) }}
             </span>
           </div>
+          <p v-if="sub.pausadaPorPago" class="sub-warning" role="alert">
+            No pudimos cobrar tu último pago. Actualizá tu medio de pago y la membresía se reactiva sola al cobrarse.
+          </p>
           <div class="sub-actions">
             <button
               v-if="sub.estado === 'activa'"
@@ -56,10 +59,26 @@
               Pausar
             </button>
             <button
+              v-if="sub.estado === 'pausada' && !sub.pausadaPorPago"
+              class="btn btn-primary btn-sm"
+              :disabled="actionLoading === sub.id"
+              @click="handleResume(sub.id)"
+            >
+              Reanudar
+            </button>
+            <button
+              v-if="sub.paymentProvider && sub.estado !== 'cancelada'"
+              :class="sub.pausadaPorPago ? 'btn btn-primary btn-sm' : 'btn btn-secondary btn-sm'"
+              :disabled="actionLoading === sub.id"
+              @click="handleBillingPortal(sub.id)"
+            >
+              {{ sub.pausadaPorPago ? 'Actualizar medio de pago' : 'Gestionar pago' }}
+            </button>
+            <button
               v-if="sub.estado !== 'cancelada'"
               class="btn btn-outline-danger btn-sm"
               :disabled="actionLoading === sub.id"
-              @click="handleCancel(sub.id)"
+              @click="askCancel(sub.id)"
             >
               Cancelar
             </button>
@@ -82,6 +101,17 @@
         <p v-for="request in requests.items" :key="request.id">
           Solicitud {{ request.id }}: {{ requestStatus(request.estado) }}
           <span v-if="request.errorPublico"> — {{ request.errorPublico }}</span>
+          <span v-if="request.estado === 'esperando_pago' && request.cobro"> — Total a pagar: {{ formatCharge(request.cobro) }}</span>
+          <template v-if="request.estado === 'esperando_pago'">
+            <a
+              v-if="safeCheckoutUrl(request.checkoutUrl)"
+              class="btn btn-primary btn-sm"
+              :href="safeCheckoutUrl(request.checkoutUrl) ?? undefined"
+            >Completar el pago</a>
+            <button class="btn btn-secondary btn-sm" :disabled="discarding === request.id" @click="handleDiscard(request.id)">
+              {{ discarding === request.id ? 'Descartando...' : 'Descartar' }}
+            </button>
+          </template>
         </p>
       </div>
       <button class="btn btn-secondary btn-sm" :disabled="requests.loading" @click="refreshRequests">Actualizar estado</button>
@@ -160,19 +190,31 @@
         Solicitar la caja <strong>{{ selectedCaja?.nombre }}</strong> por
         <strong>${{ selectedCaja ? Number(selectedCaja.precioBase).toLocaleString('es-AR', { minimumFractionDigits: 2 }) : '' }} / mes</strong>.
       </p>
-      <p>La solicitud se procesará después de enviarla; la membresía todavía no estará activa.</p>
+      <p>La solicitud se procesará después de enviarla. Si requiere pago, te llevamos a la página de pago; la membresía se activa cuando se confirma.</p>
       <div class="dialog-actions">
         <button class="btn btn-secondary" autofocus @click="confirmDialog?.close()">Volver</button>
         <button class="btn btn-primary" :disabled="requests.sending" @click="confirmRequest">Confirmar solicitud</button>
       </div>
     </dialog>
+    <ConfirmModal
+      :is-open="cancelTarget !== null"
+      title="Cancelar membresía"
+      message="¿Seguro que querés cancelar esta membresía? Se deja de cobrar y no se puede deshacer."
+      confirm-label="Sí, cancelar membresía"
+      :loading="cancelTarget !== null && actionLoading === cancelTarget"
+      @confirm="confirmCancel"
+      @cancel="cancelTarget = null"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/common/store/auth.store';
 import { useSolicitudesStore, isTerminal } from '@/modules/suscripciones/store/solicitudes.store';
+import ConfirmModal from '@/common/components/ConfirmModal.vue';
+import { safeCheckoutUrl, hasInFlightRequest, pollDelayForAge, formatDay, formatCharge } from '@/modules/suscripciones/store/solicitudes.logic';
 import type { EstadoSolicitud } from '@/modules/suscripciones/services/solicitudes.service';
 import type { CajaMensualDTO } from '@/modules/cajas-mensuales/services/cajas-mensuales.service';
 import { useCajasMensualesStore } from '@/modules/cajas-mensuales/store/cajas-mensuales.store';
@@ -183,6 +225,8 @@ const store = useCajasMensualesStore();
 const toast = useToastStore();
 const auth = useAuthStore();
 const requests = useSolicitudesStore();
+const route = useRoute();
+const router = useRouter();
 const requestsEnabled = import.meta.env.VITE_SUBSCRIPTION_REQUESTS_ENABLED === 'true';
 const confirmDialog = ref<HTMLDialogElement | null>(null);
 const selectedCaja = ref<CajaMensualDTO | null>(null);
@@ -191,12 +235,16 @@ let pollTimer: ReturnType<typeof setTimeout> | undefined;
 let pendingSince: number | null = null;
 let previousCompleted = new Set<string>();
 let disposed = false;
+// Tras volver del checkout (?pago=exito) se consulta seguido por un rato para detectar la activación.
+let awaitingPaymentUntil = 0;
 let membershipGeneration = 0;
 
 const misSuscripciones = ref<SuscripcionDTO[]>([]);
 const loadingSuscripciones = ref<boolean>(false);
 const errorSuscripciones = ref<string | null>(null);
 const actionLoading = ref<string | null>(null);
+const discarding = ref<string | null>(null);
+const cancelTarget = ref<string | null>(null);
 
 const fetchMisSuscripciones = async () => {
   const generation = ++membershipGeneration;
@@ -215,7 +263,20 @@ const fetchMisSuscripciones = async () => {
   }
 };
 
+// Al volver del checkout el proveedor redirige a /catalogo?pago=exito|cancelado.
+const handlePaymentReturn = () => {
+  const result = route.query.pago;
+  if (result === 'exito') {
+    awaitingPaymentUntil = Date.now() + 90000;
+    toast.info('Recibimos tu pago. Estamos activando tu membresía; puede tardar unos segundos.', 'Pago recibido');
+  } else if (result === 'cancelado') {
+    toast.info('El pago no se completó. Podés retomarlo desde "Mis solicitudes".', 'Pago cancelado');
+  }
+  if (result) void router.replace({ query: { ...route.query, pago: undefined } });
+};
+
 onMounted(async () => {
+  handlePaymentReturn();
   await Promise.all([
     store.fetchCajas(),
     fetchMisSuscripciones(),
@@ -245,23 +306,33 @@ watch(() => auth.user?.id, async (id) => {
   if (id) await refreshRequests();
 });
 const onVisibilityChange = () => { if (!document.hidden) void refreshRequests(); };
-// Adaptive polling: fast while a request is open (it usually resolves in ~1 s),
-// slow when idle. Paused while the tab is hidden; resumes on visibilitychange.
-const nextPollDelay = () => {
-  if (!requests.items.some(item => !isTerminal(item.estado))) { pendingSince = null; return 30000; }
-  pendingSince ??= Date.now();
-  const age = Date.now() - pendingSince;
-  return age < 10000 ? 1000 : age < 30000 ? 3000 : 10000;
+// Polling adaptivo: rápido mientras el servidor resuelve un pedido (suele tardar ~1 s) y NINGUNO cuando no hay nada en curso.
+// Un pedido en `esperando_pago` espera al suscriptor, no al servidor: no se consulta en bucle; se actualiza al volver a la
+// pestaña (visibilitychange) o con "Actualizar estado". Pausado mientras la pestaña está oculta.
+const nextPollDelay = (): number | null => {
+  const now = Date.now();
+  if (!hasInFlightRequest(requests.items, now, awaitingPaymentUntil)) { pendingSince = null; return null; }
+  pendingSince ??= now;
+  return pollDelayForAge(now - pendingSince);
 };
 const schedulePoll = () => {
   if (disposed || !requestsEnabled) return;
   if (pollTimer) clearTimeout(pollTimer);
-  pollTimer = setTimeout(() => { if (document.hidden) schedulePoll(); else void refreshRequests(); }, nextPollDelay());
+  const delay = nextPollDelay();
+  if (delay === null) return;
+  pollTimer = setTimeout(() => { if (document.hidden) schedulePoll(); else void refreshRequests(); }, delay);
 };
 // Long-poll the new request: the server answers as soon as the worker finishes (~100 ms).
 const followRequest = async (id: string) => {
   for (let attempt = 0; attempt < 3 && !disposed; attempt++) {
     const latest = await requests.wait(id);
+    // El worker ya creó el checkout: llevamos al suscriptor a la página de pago del proveedor.
+    const checkoutUrl = latest?.estado === 'esperando_pago' ? safeCheckoutUrl(latest.checkoutUrl) : null;
+    if (checkoutUrl && !disposed) {
+      toast.info('Te llevamos a la página de pago.', 'Pago');
+      window.location.assign(checkoutUrl);
+      return;
+    }
     if (!latest || isTerminal(latest.estado)) break;
   }
   if (!disposed) await refreshRequests();
@@ -276,6 +347,7 @@ const refreshRequests = async () => {
 const hasPendingRequest = (cajaId: string) => requests.items.some(item => item.cajaMensualId === cajaId && !isTerminal(item.estado));
 const requestStatus = (state: EstadoSolicitud) => ({
   pendiente: 'Recibida; pendiente de procesamiento', procesando: 'En procesamiento',
+  esperando_pago: 'Esperando el pago', expirado: 'Expirada; podés solicitarla de nuevo',
   completado: 'Completada', rechazado: 'Rechazada', fallido: 'No pudo completarse; contactá a soporte',
 }[state] || 'Estado desconocido; actualizá la consulta');
 const onDialogClose = () => { selectedCaja.value = null; dialogTrigger?.focus(); };
@@ -340,6 +412,53 @@ const handlePause = async (id: string) => {
   } finally {
     actionLoading.value = null;
   }
+};
+
+const handleResume = async (id: string) => {
+  actionLoading.value = id;
+  try {
+    await suscripcionesService.resume(id);
+    toast.info('Suscripción reanudada correctamente', 'Membresía activa');
+    await fetchMisSuscripciones();
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'Error al reanudar la suscripción');
+  } finally {
+    actionLoading.value = null;
+  }
+};
+
+const handleDiscard = async (id: string) => {
+  discarding.value = id;
+  try {
+    const ok = await requests.discard(id);
+    if (ok) toast.info('Descartamos el pedido; podés solicitar la caja de nuevo.', 'Pedido descartado');
+    else toast.error('No se pudo descartar el pedido. Si ya pagaste, esperá unos segundos y actualizá el estado.');
+    await refreshRequests();
+  } finally {
+    discarding.value = null;
+  }
+};
+
+const handleBillingPortal = async (id: string) => {
+  actionLoading.value = id;
+  try {
+    const res = await suscripcionesService.billingPortal(id);
+    const url = safeCheckoutUrl(res.data?.url);
+    if (!url) throw new Error('URL inválida');
+    window.location.assign(url);
+  } catch (err: any) {
+    toast.error(err.response?.data?.message || 'No se pudo abrir el portal de pagos');
+  } finally {
+    actionLoading.value = null;
+  }
+};
+
+const askCancel = (id: string) => { cancelTarget.value = id; };
+const confirmCancel = async () => {
+  const id = cancelTarget.value;
+  if (!id) return;
+  await handleCancel(id);
+  cancelTarget.value = null;
 };
 
 const handleCancel = async (id: string) => {
@@ -465,6 +584,13 @@ const formatCategoria = (cat: string) =>
   margin-top: 0.25rem;
 }
 
+.sub-warning {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--color-accent, #b45309);
+  background: rgba(180, 83, 9, 0.08);
+  font-size: 0.875rem;
+}
 .sub-actions {
   display: flex;
   gap: 0.5rem;

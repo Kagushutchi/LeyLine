@@ -1,4 +1,6 @@
 require('reflect-metadata');
+// Hermético: el .env local puede habilitar pagos y eso cambia el comportamiento del alta heredada.
+process.env.PAYMENT_PROVIDER = 'none';
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DataSource } = require('typeorm');
@@ -89,4 +91,19 @@ test('tenant and ownership isolation on reads and mutations', async (t) => {
   assert.equal((await call(admin2, 'GET', `/cliente/${s1.id}`)).body.data.length, 0);
   assert.equal((await call(u1, 'PUT', `/${created.id}/pausar`)).status, 200);
   assert.equal((await call(admin1, 'DELETE', `/${created.id}`)).status, 200);
+});
+
+test('con pagos habilitados el suscriptor no puede darse de alta sin pagar; el admin sí', async (t) => {
+  const { call, u1, admin1, box } = await setup(t);
+  const { envConfig } = require('../dist/config/env.config');
+  const previous = envConfig.payments.provider;
+  envConfig.payments.provider = 'stripe';
+  t.after(() => { envConfig.payments.provider = previous; });
+  const blocked = await call(u1, 'POST', '/', { cajaMensualId: box.id });
+  assert.equal(blocked.status, 403);
+  assert.match(blocked.body.message, /solicitud de suscripci/);
+  const adminCreate = await call(admin1, 'POST', '/', { cajaMensualId: box.id, suscriptorId: u1.suscriptorId, montoMensual: 10 });
+  assert.equal(adminCreate.status, 201);
+  envConfig.payments.provider = 'none';
+  assert.equal((await call(u1, 'POST', '/', { cajaMensualId: box.id })).status, 409, 'sin pagos: ya existe la del admin');
 });

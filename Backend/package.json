@@ -38,6 +38,7 @@
     "reflect-metadata": "^0.2.2",
     "soap": "^1.14.0",
     "sqlite3": "^6.0.1",
+    "stripe": "^23.1.0",
     "swagger-ui-express": "^5.0.1",
     "typeorm": "^0.3.20",
     "zod": "^4.6.7"
