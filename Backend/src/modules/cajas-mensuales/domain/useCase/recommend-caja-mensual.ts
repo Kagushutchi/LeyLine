@@ -202,7 +202,9 @@ ${JSON.stringify(cajasParaPrompt, null, 2)}
         body: JSON.stringify(body),
       });
     } catch (err: any) {
-      throw new AppError(`Error de red al contactar la API de Gemini: ${err.message}`, 503);
+      const cause = err?.cause?.message || err?.cause?.code || '';
+      const detail = cause ? `${err.message} (${cause})` : err.message;
+      throw new AppError(`Error de red al contactar la API de Gemini: ${detail}`, 503);
     }
 
     if (!response.ok) {

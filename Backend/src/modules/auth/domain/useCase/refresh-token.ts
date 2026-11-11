@@ -32,6 +32,7 @@ export default class RefreshToken {
       email: user.email,
       role: user.role,
       tenantId: user.tenantId,
+      suscriptorId: user.suscriptorId || null,
       nombre: user.nombre,
       apellido: user.apellido,
     };

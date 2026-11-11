@@ -40,6 +40,7 @@ export default class Login {
       email: user.email,
       role: user.role,
       tenantId: user.tenantId,
+      suscriptorId: user.suscriptorId || null,
       nombre: user.nombre,
       apellido: user.apellido,
     };
@@ -58,6 +59,7 @@ export default class Login {
         nombre: user.nombre,
         apellido: user.apellido,
         tenantId: user.tenantId,
+        suscriptorId: user.suscriptorId || null,
         tenant: user.tenant
           ? {
               id: user.tenant.id,

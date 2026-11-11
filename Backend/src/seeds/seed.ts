@@ -262,6 +262,107 @@ const suscriptoresData: Partial<Suscriptor>[] = [
   },
 ];
 
+async function ensureDemoUsers(ds: DataSource): Promise<void> {
+  const tenantRepo = ds.getRepository(Tenant);
+  const userRepo = ds.getRepository(User);
+  const suscriptorRepo = ds.getRepository(Suscriptor);
+
+  let demoTenant = await tenantRepo.findOneBy({ slug: 'bodega-raices-de-cuyo' });
+  if (!demoTenant) {
+    demoTenant = await tenantRepo.save(
+      tenantRepo.create({
+        id: '00000000-0000-4000-8000-000000000001',
+        nombre: 'Bodega Raíces de Cuyo',
+        slug: 'bodega-raices-de-cuyo',
+        plan: 'artesanal',
+        activo: true,
+      })
+    );
+  }
+
+  // Admin
+  let adminUser = await userRepo.findOneBy({ username: 'admin' });
+  if (!adminUser) {
+    await userRepo.save(
+      userRepo.create({
+        id: '00000000-0000-4000-8000-0000000000a1',
+        username: 'admin',
+        email: 'admin@bodegaraices.com',
+        password: await JwtUtils.hashPassword('password123'),
+        role: 'admin',
+        nombre: 'Administrador Bodega',
+        tenantId: demoTenant.id,
+        activo: true,
+      })
+    );
+  } else if (!adminUser.tenantId) {
+    adminUser.tenantId = demoTenant.id;
+    await userRepo.save(adminUser);
+  }
+
+  // Admin demo
+  const adminDemo = await userRepo.findOneBy({ username: 'admin-demo' });
+  if (!adminDemo) {
+    await userRepo.save(
+      userRepo.create({
+        username: 'admin-demo',
+        email: 'admin@clubcurator.demo',
+        password: await JwtUtils.hashPassword('Password123'),
+        role: 'admin',
+        tenantId: demoTenant.id,
+        activo: true,
+      })
+    );
+  }
+
+  // Suscriptor Valentina
+  let valentinaSub = await suscriptorRepo.findOneBy({ email: 'valentina.rossi@example.com' });
+  if (!valentinaSub) {
+    valentinaSub = await suscriptorRepo.save(
+      suscriptorRepo.create({
+        nombre: 'Valentina',
+        apellido: 'Rossi',
+        email: 'valentina.rossi@example.com',
+        telefono: '+54 11 2345-6789',
+        documento: '32.100.111',
+        tenantId: demoTenant.id,
+        preferenciasOrganolepticas: {
+          categoria: 'vinos',
+          perfilSabor: ['frutos rojos', 'ciruela madura', 'vainilla', 'roble'],
+          intensidad: 'alta',
+          alergiasRestricciones: ['sulfitos'],
+          notasAdicionales: 'Le gustan los tintos con cuerpo y paso por roble francés.',
+        },
+        activo: true,
+      })
+    );
+  } else if (!valentinaSub.tenantId) {
+    valentinaSub.tenantId = demoTenant.id;
+    await suscriptorRepo.save(valentinaSub);
+  }
+
+  // Usuario Valentina
+  let valentinaUser = await userRepo.findOneBy({ username: 'valentina' });
+  if (!valentinaUser) {
+    await userRepo.save(
+      userRepo.create({
+        id: '00000000-0000-4000-8000-0000000000b1',
+        username: 'valentina',
+        email: 'valentina.rossi@example.com',
+        password: await JwtUtils.hashPassword('password123'),
+        role: 'subscriptor',
+        nombre: 'Valentina',
+        apellido: 'Rossi',
+        suscriptorId: valentinaSub.id,
+        activo: true,
+      })
+    );
+  } else if (!valentinaUser.suscriptorId || valentinaUser.suscriptorId !== valentinaSub.id) {
+    valentinaUser.suscriptorId = valentinaSub.id;
+    await userRepo.save(valentinaUser);
+  }
+}
+
 // ─── Función principal ────────────────────────────────────────────────────────
 
 async function seed(): Promise<void> {
@@ -279,8 +380,10 @@ async function seed(): Promise<void> {
   if (productosExistentes > 0) {
     logger.warn(
       `Ya existen ${productosExistentes} producto(s) en la base de datos. ` +
-        'Abortando seed para evitar duplicados. Limpia la BD antes de volver a sembrar.',
+        'Garantizando sincronización de usuarios de demo y suscriptores...',
     );
+    await ensureDemoUsers(ds);
+    logger.info('✔ Usuarios de demo y suscriptores verificados.');
     await AppDataSource.destroy();
     return;
   }

@@ -18,6 +18,7 @@ export default class GetCurrentUser {
       nombre: user.nombre,
       apellido: user.apellido,
       tenantId: user.tenantId,
+      suscriptorId: user.suscriptorId || null,
       tenant: user.tenant
         ? {
             id: user.tenant.id,

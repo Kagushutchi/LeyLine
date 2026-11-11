@@ -6,6 +6,7 @@ export interface JwtPayload {
   email: string;
   role: UserRole;
   tenantId?: string;
+  suscriptorId?: string | null;
   nombre?: string;
   apellido?: string;
 }

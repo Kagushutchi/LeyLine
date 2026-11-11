@@ -55,6 +55,9 @@ services:
     container_name: clubcurator_api
     restart: on-failure
     <<: *backend-env
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "3000:3000"
     depends_on:
@@ -73,6 +76,9 @@ services:
     container_name: clubcurator_worker
     restart: on-failure
     <<: *backend-env
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     command: ["node", "dist/workers/queue-worker.js"]
     depends_on:
       api: { condition: service_healthy }

@@ -315,21 +315,20 @@ const handleDelete = async () => {
 }
 
 .btn-ia-admin {
-  background: linear-gradient(135deg, #1f1b18 0%, #362923 100%);
-  color: #d4af37;
-  border: 1px solid rgba(212, 175, 55, 0.4);
+  background-color: var(--color-dark);
+  color: var(--color-light);
+  border: 1px solid var(--color-dark);
   font-weight: 600;
   padding: 0.55rem 1.1rem;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+  transition: all var(--transition-fast);
 }
 
 .btn-ia-admin:hover:not(:disabled) {
-  border-color: #d4af37;
-  transform: translateY(-1px);
-  box-shadow: 0 5px 15px rgba(212, 175, 55, 0.25);
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-white);
 }
 
 .btn-ia-admin:disabled {
@@ -339,13 +338,12 @@ const handleDelete = async () => {
 
 /* ── Admin IA Panel ── */
 .admin-ia-panel {
-  background: #ffffff;
-  border: 1px solid #e2d9cd;
-  border-top: 4px solid #d4af37;
-  border-radius: 10px;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-top: 4px solid var(--color-dark);
+  border-radius: var(--radius-sm);
   padding: 1.5rem;
   margin-bottom: 2rem;
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
 }
 
 .ia-panel-header {
@@ -354,7 +352,7 @@ const handleDelete = async () => {
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f0ebe2;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ia-badge-group {
@@ -367,31 +365,32 @@ const handleDelete = async () => {
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: #8c6a12;
+  color: var(--color-accent);
   text-transform: uppercase;
 }
 
 .affinity-tag {
-  background: #eef7ed;
-  color: #27672b;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
   font-size: 0.775rem;
   font-weight: 700;
   padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  border: 1px solid #c2e2bf;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-success);
 }
 
 .close-ia-btn {
   background: transparent;
   border: none;
   font-size: 1.5rem;
-  color: #999;
+  color: var(--color-muted);
   cursor: pointer;
   line-height: 1;
+  transition: color var(--transition-fast);
 }
 
 .close-ia-btn:hover {
-  color: #333;
+  color: var(--color-dark);
 }
 
 .ia-panel-grid {
@@ -415,7 +414,7 @@ const handleDelete = async () => {
 
 .suggested-desc {
   font-size: 0.85rem;
-  color: #554d46;
+  color: var(--color-muted);
   line-height: 1.5;
   margin-bottom: 0.75rem;
 }
@@ -428,17 +427,17 @@ const handleDelete = async () => {
 
 .suggested-comp {
   font-size: 0.825rem;
-  background: #faf8f5;
+  background-color: var(--color-light);
   padding: 0.85rem;
-  border-radius: 6px;
-  border: 1px solid #ede7dc;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-border);
 }
 
 .comp-title {
   font-weight: 600;
   display: block;
   margin-bottom: 0.35rem;
-  color: #7d5e16;
+  color: var(--color-dark);
 }
 
 .suggested-comp ul {
@@ -449,7 +448,7 @@ const handleDelete = async () => {
 
 .suggested-comp li {
   padding: 0.2rem 0;
-  border-bottom: 1px dashed #e6ded3;
+  border-bottom: 1px dashed var(--color-border);
 }
 
 .suggested-comp li:last-child {
@@ -457,9 +456,9 @@ const handleDelete = async () => {
 }
 
 .ia-justification-box {
-  background: #faf7f2;
-  border: 1px solid #ebe2d4;
-  border-radius: 8px;
+  background-color: var(--color-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -470,7 +469,7 @@ const handleDelete = async () => {
   font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
-  color: #7d5e16;
+  color: var(--color-dark);
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
 }
@@ -478,7 +477,7 @@ const handleDelete = async () => {
 .justification-text {
   font-size: 0.875rem;
   line-height: 1.6;
-  color: #38312b;
+  color: var(--color-dark);
   font-style: italic;
   margin-bottom: 1rem;
 }
@@ -489,20 +488,19 @@ const handleDelete = async () => {
 }
 
 .btn-ia-apply {
-  background: linear-gradient(135deg, #d4af37 0%, #b89115 100%);
-  color: #1a1614;
-  border: none;
-  font-weight: 700;
+  background-color: var(--color-dark);
+  color: var(--color-white);
+  border: 1px solid var(--color-dark);
+  font-weight: 600;
   font-size: 0.875rem;
   padding: 0.65rem 1.25rem;
-  border-radius: 6px;
+  border-radius: var(--radius-xs);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+  transition: all var(--transition-fast);
 }
 
 .btn-ia-apply:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.45);
+  background-color: var(--color-accent);
+  border-color: var(--color-accent);
 }
 </style>

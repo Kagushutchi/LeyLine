@@ -297,6 +297,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { apiClient } from '@/common/api/http-client';
 import { useAuthStore } from '@/common/store/auth.store';
 import { useSolicitudesStore, isTerminal } from '@/modules/suscripciones/store/solicitudes.store';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
@@ -339,7 +340,24 @@ const loadingRecommendation = ref<boolean>(false);
 const recommendationError = ref<string | null>(null);
 
 const pedirRecomendacionIA = async () => {
-  const suscriptorId = auth.user?.suscriptorId;
+  let suscriptorId = auth.user?.suscriptorId;
+
+  // Si no está en el store (por ejemplo sesión anterior en localStorage), consultar /auth/me
+  if (!suscriptorId) {
+    try {
+      const meRes: any = await apiClient.get('/auth/me');
+      if (meRes.data?.suscriptorId) {
+        suscriptorId = meRes.data.suscriptorId;
+        if (auth.user) {
+          auth.user.suscriptorId = suscriptorId;
+          localStorage.setItem('cc_user', JSON.stringify(auth.user));
+        }
+      }
+    } catch {
+      // Ignorar error si falla consulta
+    }
+  }
+
   if (!suscriptorId) {
     toast.error('Tu cuenta de usuario no tiene un perfil de suscriptor vinculado para evaluar notas de cata.', 'Perfil no vinculado');
     return;
@@ -838,26 +856,24 @@ const formatCategoria = (cat: string) =>
 }
 
 .ia-banner {
-  background: linear-gradient(135deg, #1b1715 0%, #2c221e 50%, #3d2b24 100%);
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  border-radius: 12px;
+  background-color: var(--color-dark);
+  border: 1px solid var(--color-dark);
+  border-radius: var(--radius-sm);
   padding: 1.75rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 1.5rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
-  color: #fff;
+  color: var(--color-white);
 }
 
 .ia-header-badge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
-  color: #d4af37;
+  color: var(--color-accent);
   text-transform: uppercase;
   margin-bottom: 0.5rem;
 }
@@ -865,50 +881,48 @@ const formatCategoria = (cat: string) =>
 .ia-title {
   font-family: var(--font-serif);
   font-size: 1.4rem;
-  color: #f7f3ee;
+  color: var(--color-white);
   margin: 0 0 0.5rem;
 }
 
 .ia-subtitle {
   font-size: 0.875rem;
-  color: #c9bfb5;
+  color: var(--color-border);
   margin: 0;
   max-width: 600px;
   line-height: 1.5;
 }
 
 .btn-ia {
-  background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
-  color: #1a1614;
-  font-weight: 700;
+  background-color: var(--color-light);
+  color: var(--color-dark);
+  font-weight: 600;
   padding: 0.85rem 1.6rem;
-  border-radius: 8px;
-  border: none;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-light);
   cursor: pointer;
   white-space: nowrap;
   font-size: 0.9rem;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+  transition: all var(--transition-fast);
 }
 
 .btn-ia:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
-  filter: brightness(1.08);
+  background-color: var(--color-white);
+  color: var(--color-dark);
+  border-color: var(--color-white);
 }
 
 .btn-ia:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
 .ia-result-card {
-  background: #ffffff;
-  border: 1px solid #e6ded3;
-  border-left: 4px solid #d4af37;
-  border-radius: 12px;
+  background-color: var(--color-white);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--color-dark);
+  border-radius: var(--radius-sm);
   padding: 1.75rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .ia-result-header {
@@ -917,23 +931,23 @@ const formatCategoria = (cat: string) =>
   align-items: center;
   margin-bottom: 1.25rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid #f0ebe4;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .ia-match-badge {
-  background: #eef7ed;
-  color: #2e6930;
+  background-color: var(--color-success-bg);
+  color: var(--color-success);
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.825rem;
   padding: 0.35rem 0.8rem;
-  border-radius: 20px;
-  border: 1px solid #c2e2bf;
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--color-success);
 }
 
 .ia-model-badge {
-  font-size: 0.72rem;
-  color: #8c827a;
-  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--color-muted);
+  font-family: var(--font-sans);
 }
 
 .ia-result-body {
@@ -961,13 +975,13 @@ const formatCategoria = (cat: string) =>
 
 .ia-caja-desc {
   font-size: 0.85rem;
-  color: #665c54;
+  color: var(--color-muted);
   margin: 0.25rem 0 0.75rem;
 }
 
 .ia-caja-price {
   font-size: 1.2rem;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--color-dark);
   margin-bottom: 1rem;
 }
@@ -980,9 +994,9 @@ const formatCategoria = (cat: string) =>
 }
 
 .ia-sommelier-note {
-  background: #faf7f2;
-  border: 1px solid #eee5d8;
-  border-radius: 8px;
+  background-color: var(--color-light);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -993,15 +1007,15 @@ const formatCategoria = (cat: string) =>
   font-weight: 700;
   font-size: 0.8rem;
   text-transform: uppercase;
-  color: #7d5e16;
+  color: var(--color-dark);
   letter-spacing: 0.05em;
   margin-bottom: 0.5rem;
 }
 
 .note-text {
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   line-height: 1.6;
-  color: #3b322c;
+  color: var(--color-dark);
   font-style: italic;
   margin: 0 0 1.25rem;
 }
@@ -1012,11 +1026,11 @@ const formatCategoria = (cat: string) =>
 }
 
 .ia-error-alert {
-  background: #fdf2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger);
+  border: 1px solid var(--color-danger);
   padding: 0.85rem 1.25rem;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   font-size: 0.875rem;
 }
 </style>

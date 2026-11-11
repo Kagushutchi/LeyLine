@@ -81,6 +81,7 @@ export default class RegisterSubscriptor {
         username: user.username,
         email: user.email,
         role: user.role,
+        suscriptorId: subscriber.id,
         nombre: user.nombre,
         apellido: user.apellido,
       };
@@ -96,6 +97,7 @@ export default class RegisterSubscriptor {
           username: user.username,
           email: user.email,
           role: user.role,
+          suscriptorId: subscriber.id,
           nombre: user.nombre,
           apellido: user.apellido,
         },
