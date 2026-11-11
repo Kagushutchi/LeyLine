@@ -204,7 +204,9 @@ ${JSON.stringify(catalogoProductos, null, 2)}
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: 0.4,
-        maxOutputTokens: 1200,
+        // La sugerencia admin devuelve más campos (incluye composicionSugerida, un array anidado)
+        // que el recomendador del cliente: 1200 lo cortaba a mitad de respuesta (JSON truncado).
+        maxOutputTokens: 2048,
         responseMimeType: 'application/json',
       },
     };
@@ -231,10 +233,20 @@ ${JSON.stringify(catalogoProductos, null, 2)}
     }
 
     const data = await response.json() as any;
-    const text: string | undefined = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    const candidate = data?.candidates?.[0];
+    const text: string | undefined = candidate?.content?.parts?.[0]?.text;
 
     if (!text) {
       throw new AppError('La API de Gemini devolvió una respuesta vacía', 502);
+    }
+
+    // Si Gemini se quedó sin tokens a mitad de la respuesta, el texto es JSON incompleto:
+    // lo detectamos acá en vez de dejar que falle como un parse error genérico más abajo.
+    if (candidate?.finishReason === 'MAX_TOKENS') {
+      throw new AppError(
+        'La respuesta de la IA se cortó por el límite de tokens (maxOutputTokens). Subí ese valor o acortá el prompt/catálogo.',
+        502,
+      );
     }
 
     return text;
@@ -250,8 +262,10 @@ ${JSON.stringify(catalogoProductos, null, 2)}
     try {
       return JSON.parse(cleaned);
     } catch {
+      // Slice más largo que antes (300 -> 2000): si esto vuelve a fallar por otra causa,
+      // queremos ver lo suficiente del texto real en los logs para diagnosticarlo sin adivinar.
       throw new AppError(
-        `Error al parsear sugerencia comercial de IA: ${cleaned.slice(0, 300)}`,
+        `Error al parsear sugerencia comercial de IA: ${cleaned.slice(0, 2000)}`,
         502,
       );
     }
