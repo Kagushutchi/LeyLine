@@ -20,6 +20,7 @@ export interface UserInfo {
   nombre?: string;
   apellido?: string;
   tenantId?: string;
+  suscriptorId?: string | null;
   tenant?: TenantInfo | null;
 }
 

@@ -15,7 +15,7 @@
           :class="{ active: selectedRole === 'admin' }"
           @click="selectedRole = 'admin'"
         >
-          🏛️ Dueño de Bodega (Admin)
+          Dueño de Bodega (Admin)
         </button>
         <button
           type="button"
@@ -23,7 +23,7 @@
           :class="{ active: selectedRole === 'subscriptor' }"
           @click="selectedRole = 'subscriptor'"
         >
-          🍷 Cliente (Subscriptor)
+          Cliente (Subscriptor)
         </button>
       </div>
 

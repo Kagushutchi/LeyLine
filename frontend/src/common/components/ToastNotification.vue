@@ -10,8 +10,8 @@
         <div class="toast-icon">
           <span v-if="toast.type === 'success'">✓</span>
           <span v-else-if="toast.type === 'error'">✕</span>
-          <span v-else-if="toast.type === 'warning'">⚠</span>
-          <span v-else>ℹ</span>
+          <span v-else-if="toast.type === 'warning'">!</span>
+          <span v-else>i</span>
         </div>
         <div class="toast-content">
           <div v-if="toast.title" class="toast-title font-serif-title">{{ toast.title }}</div>

@@ -27,18 +27,18 @@ reutilización del cliente y portal de facturación, y documentación en OpenAPI
 - El segundo cobro mensual con Stripe real no se ejercitó (sólo con eventos simulados); haría falta un reloj de pruebas de Stripe.
 - En producción el secreto del webhook sale de un endpoint creado en el dashboard, no del Stripe CLI.
 
-## Pendiente 2 — Componente de IA (recomendador)
+## Pendiente 2 — Componente de IA (recomendador para clientes y asesor para admin) — COMPLETADO
 
-`RecommendCajaMensual` (`modules/cajas-mensuales/domain/useCase/recommend-caja-mensual.ts`) está enganchado a un endpoint REST real, pero adentro es un heurístico hardcodeado: devuelve un nombre armado por template, precio fijo (`12500.00`) y `composiciones: []`. No hay modelo, no hay llamada a ninguna API de ML/LLM.
+Implementado y validado de punta a punta (Backend y Frontend).
+Documentación técnica completa, contratos y capturas en `docs/componente-ia-recomendador.md`.
 
-**Tareas:**
-- [ ] Elegir el enfoque permitido por la consigna: recomendación por contenido/historial (usar `preferenciasOrganolepticas` del Suscriptor y `perfilNotas` de Producto), o delegar a una API de LLM (OpenAI/HF) para rankear/elegir productos.
-- [ ] Reemplazar la lógica de `RecommendCajaMensual.execute` por el algoritmo real, devolviendo `composiciones` reales en vez de `[]`.
-- [ ] Credenciales/config si se usa una API externa (`OPENAI_API_KEY` o similar) en `.env.example`.
-- [ ] Exponerlo como REST (ya existe el endpoint) o, si se quiere cumplir también el requisito asíncrono, invocarlo vía la cola existente (RabbitMQ) en lugar de sincrónico.
-- [ ] Evidencia de prueba del componente de IA (pedida explícitamente en el entregable de TP.md).
+**Tareas completadas:**
+- [x] **Recomendador de Cajas para Clientes (Backend & Frontend):** Cruza `preferenciasOrganolepticas` del Suscriptor con `perfilNotas` de Producto. Integrado en `CatalogoView.vue` con banner Sommelier IA, porcentaje de match y botón de suscripción directa.
+- [x] **Asesor Estratégico de Cajas para el Administrador (Backend & Frontend):** Endpoint `POST /api/cajas-mensuales/sugerir-caja-admin`. Analiza la masa agregada de clientes del tenant y su inventario disponible para proponer qué caja crear. Integrado en `CajasMensualesView.vue` con botón "✨ Sugerir Caja con IA" y pre-llenado automático del formulario.
+- [x] **Credenciales seguras:** `.env.example` y `env.config.ts` configurados con `GOOGLE_AI_API_KEY` y `GEMINI_MODEL`.
+- [x] **Pruebas automatizadas:** `Backend/tests/recomendador-ia.test.ts` con 3 tests pasando. Total tests de la suite: **106 tests pasando al 100%**.
 
-## Pendiente 3 — Facade de orquestación
+## Pendiente 3 — Facade de orquestación (Siguiente Tarea)
 
 `SubscriptionPackFacade.activateSubscriptionAndPrepareFirstBox` (`common/patterns/facades/subscription-pack.facade.ts`) devuelve `ACTIVATION_PENDING_IMPLEMENTATION`. Tiene 4 TODOs que dependen directamente de los dos pendientes anteriores, por eso conviene cerrarlo después de Stripe e IA, no antes:
 

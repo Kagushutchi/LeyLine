@@ -139,7 +139,7 @@ watch(
   () => props.caja,
   (newVal) => {
     if (newVal) {
-      isEditing.value = true;
+      isEditing.value = !!newVal.id;
       formData.nombre = newVal.nombre || '';
       formData.categoria = newVal.categoria || 'vinos';
       formData.mes = newVal.mes || (currentDate.getMonth() + 1);

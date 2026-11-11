@@ -89,6 +89,22 @@ class CajasMensualesRouter {
       }
     });
 
+    // Asesor Sommelier IA para Administradores: Analiza masa de suscriptores y sugiere qué caja crear
+    router.post(
+      `${this.BASE_URL}sugerir-caja-admin`,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const result = await this.controller.suggestCajaAdmin(req.tenantId);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
+
     router.put(
       `${this.BASE_URL}:id`,
       authMiddleware,

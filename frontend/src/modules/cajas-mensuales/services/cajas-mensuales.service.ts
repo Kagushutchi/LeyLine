@@ -25,6 +25,28 @@ export interface CajaMensualDTO {
   updatedAt?: string;
 }
 
+export interface RecommendationResultDTO {
+  cajaRecomendada: CajaMensualDTO;
+  explicacion: string;
+  puntajeMatchPorcentaje: number;
+  modeloIA: string;
+}
+
+export interface AdminBoxSuggestionDTO {
+  nombreSugerido: string;
+  categoria: 'vinos' | 'cafes' | 'cervezas';
+  precioSugerido: number;
+  descripcion: string;
+  justificacionComercial: string;
+  porcentajeAudienciaAfin: number;
+  modeloIA: string;
+  composicionSugerida: Array<{
+    productoId: string;
+    nombreProducto: string;
+    cantidad: number;
+  }>;
+}
+
 export interface ApiResponse<T> {
   status: string;
   data: T;
@@ -56,7 +78,11 @@ export const cajasMensualesService = {
     return apiClient.delete(`/cajas-mensuales/${id}`);
   },
 
-  async recommend(suscriptorId: string, preferencias: unknown): Promise<ApiResponse<Partial<CajaMensualDTO>>> {
+  async recommend(suscriptorId: string, preferencias?: unknown): Promise<ApiResponse<RecommendationResultDTO>> {
     return apiClient.post('/cajas-mensuales/recomendar', { suscriptorId, preferencias });
+  },
+
+  async suggestForAdmin(): Promise<ApiResponse<AdminBoxSuggestionDTO>> {
+    return apiClient.post('/cajas-mensuales/sugerir-caja-admin');
   },
 };

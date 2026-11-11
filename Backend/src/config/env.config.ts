@@ -50,4 +50,10 @@ export const envConfig = {
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
+  ai: {
+    /** API Key de Google AI Studio (Gemini). Obtener en https://aistudio.google.com/app/apikey */
+    googleApiKey: process.env.GOOGLE_AI_API_KEY || '',
+    /** Modelo de Gemini a utilizar para el recomendador */
+    geminiModel: process.env.GEMINI_MODEL || 'gemini-2.0-flash-exp',
+  },
 };

@@ -24,7 +24,6 @@
       </div>
 
       <div v-else-if="misSuscripciones.length === 0" class="empty-subs-box">
-        <span class="empty-icon">🍷</span>
         <p class="empty-subs-text">Aún no tienes suscripciones activas vinculadas a tu cuenta.</p>
         <p class="empty-subs-hint">Elige una de las cajas exclusivas del catálogo a continuación para comenzar tu experiencia.</p>
       </div>
@@ -43,7 +42,7 @@
           </div>
           <div class="sub-meta">
             <span v-if="sub.proximoCobro" class="meta-item">
-              📅 Próximo cobro: {{ formatDay(sub.proximoCobro) }}
+              Próximo cobro: {{ formatDay(sub.proximoCobro) }}
             </span>
           </div>
           <p v-if="sub.pausadaPorPago" class="sub-warning" role="alert">
@@ -116,6 +115,93 @@
       </div>
       <button class="btn btn-secondary btn-sm" :disabled="requests.loading" @click="refreshRequests">Actualizar estado</button>
     </section>
+
+    <!-- Sección: Sommelier IA (Recomendación Personalizada para el Cliente) -->
+    <div class="ia-sommelier-section">
+      <div class="ia-banner">
+        <div class="ia-banner-content">
+          <div class="ia-header-badge">
+            SOMMELIER INTELIGENTE (GOOGLE GEMINI)
+          </div>
+          <h2 class="ia-title">¿Buscás una recomendación a tu medida?</h2>
+          <p class="ia-subtitle">
+            Nuestro sommelier de Inteligencia Artificial analiza tus notas de cata preferidas,
+            intensidad y restricciones para sugerirte la caja ideal de nuestro catálogo exclusivo.
+          </p>
+        </div>
+        <div class="ia-banner-action">
+          <button
+            class="btn btn-ia"
+            :disabled="loadingRecommendation"
+            @click="pedirRecomendacionIA"
+          >
+            <span v-if="loadingRecommendation">Analizando tus notas de cata...</span>
+            <span v-else>Descubrir mi caja ideal</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tarjeta de resultado de la recomendación -->
+      <div v-if="recommendationResult" class="ia-result-card">
+        <div class="ia-result-header">
+          <div class="ia-match-badge">
+            {{ recommendationResult.puntajeMatchPorcentaje }}% de Coincidencia con tus gustos
+          </div>
+          <span class="ia-model-badge">Modelo: {{ recommendationResult.modeloIA }}</span>
+        </div>
+
+        <div class="ia-result-body">
+          <div class="ia-caja-info">
+            <div class="badge badge-accent mb-2">{{ formatCategoria(recommendationResult.cajaRecomendada.categoria) }}</div>
+            <h3 class="ia-caja-title">{{ recommendationResult.cajaRecomendada.nombre }}</h3>
+            <p v-if="recommendationResult.cajaRecomendada.descripcion" class="ia-caja-desc">
+              {{ recommendationResult.cajaRecomendada.descripcion }}
+            </p>
+            <div class="ia-caja-price">
+              ${{ Number(recommendationResult.cajaRecomendada.precioBase).toLocaleString('es-AR', { minimumFractionDigits: 2 }) }} / mes
+            </div>
+
+            <div v-if="recommendationResult.cajaRecomendada.composiciones?.length" class="ia-comp-list">
+              <span class="comp-label">Selección incluida:</span>
+              <div
+                v-for="comp in recommendationResult.cajaRecomendada.composiciones"
+                :key="comp.id"
+                class="comp-item"
+              >
+                {{ comp.producto?.nombre || 'Producto' }} (x{{ comp.cantidad }})
+              </div>
+            </div>
+          </div>
+
+          <div class="ia-sommelier-note">
+            <div class="note-label">Veredicto de Cata del Sommelier IA:</div>
+            <p class="note-text">{{ recommendationResult.explicacion }}</p>
+
+            <div class="note-actions">
+              <button
+                v-if="isSubscribedTo(recommendationResult.cajaRecomendada.id)"
+                class="btn btn-secondary btn-sm"
+                disabled
+              >
+                ✓ Ya estás suscripto a esta caja
+              </button>
+              <button
+                v-else
+                class="btn btn-primary"
+                :disabled="actionLoading === recommendationResult.cajaRecomendada.id"
+                @click="handleSubscribe(recommendationResult.cajaRecomendada)"
+              >
+                Suscribirme a la caja recomendada
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="recommendationError" class="ia-error-alert" role="alert">
+        <span>{{ recommendationError }}</span>
+      </div>
+    </div>
 
     <!-- Divisor -->
     <div class="catalog-divider">
@@ -216,7 +302,8 @@ import { useSolicitudesStore, isTerminal } from '@/modules/suscripciones/store/s
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
 import { safeCheckoutUrl, hasInFlightRequest, pollDelayForAge, formatDay, formatCharge } from '@/modules/suscripciones/store/solicitudes.logic';
 import type { EstadoSolicitud } from '@/modules/suscripciones/services/solicitudes.service';
-import type { CajaMensualDTO } from '@/modules/cajas-mensuales/services/cajas-mensuales.service';
+import type { CajaMensualDTO, RecommendationResultDTO } from '@/modules/cajas-mensuales/services/cajas-mensuales.service';
+import { cajasMensualesService } from '@/modules/cajas-mensuales/services/cajas-mensuales.service';
 import { useCajasMensualesStore } from '@/modules/cajas-mensuales/store/cajas-mensuales.store';
 import { suscripcionesService, SuscripcionDTO } from '@/modules/suscripciones/services/suscripciones.service';
 import { useToastStore } from '@/common/store/toast.store';
@@ -245,6 +332,36 @@ const errorSuscripciones = ref<string | null>(null);
 const actionLoading = ref<string | null>(null);
 const discarding = ref<string | null>(null);
 const cancelTarget = ref<string | null>(null);
+
+// Estado de la recomendación IA
+const recommendationResult = ref<RecommendationResultDTO | null>(null);
+const loadingRecommendation = ref<boolean>(false);
+const recommendationError = ref<string | null>(null);
+
+const pedirRecomendacionIA = async () => {
+  const suscriptorId = auth.user?.suscriptorId;
+  if (!suscriptorId) {
+    toast.error('Tu cuenta de usuario no tiene un perfil de suscriptor vinculado para evaluar notas de cata.', 'Perfil no vinculado');
+    return;
+  }
+
+  loadingRecommendation.value = true;
+  recommendationError.value = null;
+
+  try {
+    const res = await cajasMensualesService.recommend(suscriptorId);
+    if (res.data) {
+      recommendationResult.value = res.data;
+      toast.success('¡El Sommelier IA seleccionó la mejor opción según tu perfil!', 'Recomendación lista');
+    }
+  } catch (err: any) {
+    const msg = err.response?.data?.message || err.message || 'No se pudo obtener la recomendación de IA.';
+    recommendationError.value = msg;
+    toast.error(msg, 'Error Sommelier IA');
+  } finally {
+    loadingRecommendation.value = false;
+  }
+};
 
 const fetchMisSuscripciones = async () => {
   const generation = ++membershipGeneration;
@@ -475,7 +592,7 @@ const handleCancel = async (id: string) => {
 };
 
 const formatCategoria = (cat: string) =>
-  ({ vinos: '🍷 Vinos', cafes: '☕ Cafés', cervezas: '🍺 Cervezas' }[cat] || cat);
+  ({ vinos: 'Vinos', cafes: 'Cafés', cervezas: 'Cervezas' }[cat] || cat);
 </script>
 
 <style scoped>
@@ -710,5 +827,196 @@ const formatCategoria = (cat: string) =>
   font-weight: 600;
   padding: 0.3rem 0.6rem;
   display: inline-block;
+}
+
+/* ── Sommelier IA Section ── */
+.ia-sommelier-section {
+  margin: 2.5rem 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.ia-banner {
+  background: linear-gradient(135deg, #1b1715 0%, #2c221e 50%, #3d2b24 100%);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  border-radius: 12px;
+  padding: 1.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  color: #fff;
+}
+
+.ia-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: #d4af37;
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.ia-title {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  color: #f7f3ee;
+  margin: 0 0 0.5rem;
+}
+
+.ia-subtitle {
+  font-size: 0.875rem;
+  color: #c9bfb5;
+  margin: 0;
+  max-width: 600px;
+  line-height: 1.5;
+}
+
+.btn-ia {
+  background: linear-gradient(135deg, #d4af37 0%, #aa820a 100%);
+  color: #1a1614;
+  font-weight: 700;
+  padding: 0.85rem 1.6rem;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.35);
+}
+
+.btn-ia:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+  filter: brightness(1.08);
+}
+
+.btn-ia:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ia-result-card {
+  background: #ffffff;
+  border: 1px solid #e6ded3;
+  border-left: 4px solid #d4af37;
+  border-radius: 12px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+}
+
+.ia-result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid #f0ebe4;
+}
+
+.ia-match-badge {
+  background: #eef7ed;
+  color: #2e6930;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 20px;
+  border: 1px solid #c2e2bf;
+}
+
+.ia-model-badge {
+  font-size: 0.72rem;
+  color: #8c827a;
+  font-family: monospace;
+}
+
+.ia-result-body {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 2rem;
+}
+
+@media (max-width: 768px) {
+  .ia-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .ia-result-body {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ia-caja-title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  color: var(--color-dark);
+  margin: 0.25rem 0;
+}
+
+.ia-caja-desc {
+  font-size: 0.85rem;
+  color: #665c54;
+  margin: 0.25rem 0 0.75rem;
+}
+
+.ia-caja-price {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--color-dark);
+  margin-bottom: 1rem;
+}
+
+.ia-comp-list {
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ia-sommelier-note {
+  background: #faf7f2;
+  border: 1px solid #eee5d8;
+  border-radius: 8px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.note-label {
+  font-weight: 700;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #7d5e16;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.note-text {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: #3b322c;
+  font-style: italic;
+  margin: 0 0 1.25rem;
+}
+
+.note-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ia-error-alert {
+  background: #fdf2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 0.85rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
 }
 </style>
