@@ -240,8 +240,8 @@ ${JSON.stringify(cajasParaPrompt, null, 2)}
   } {
     // Limpiar posibles bloques ```json ... ``` que Gemini agrega a veces
     const cleaned = raw
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
       .replace(/```\s*$/i, '')
       .trim();
 

@@ -242,8 +242,8 @@ ${JSON.stringify(catalogoProductos, null, 2)}
 
   private parseGeminiResponse(raw: string): any {
     const cleaned = raw
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
+      .trim()
+      .replace(/^```(?:json)?\s*/i, '')
       .replace(/```\s*$/i, '')
       .trim();
 
