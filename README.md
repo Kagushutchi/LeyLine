@@ -1,5 +1,3 @@
-
-![LeyLine](/docs/LeyLine.png)
 # ClubCurator | Plataforma SaaS de Clubes de Suscripción
 
 > **SaaS llave en mano** para que creadores de marcas de nicho (vinos, cafés o cervezas artesanales) puedan lanzar y automatizar clubes de membresías mensuales con envíos personalizados.
