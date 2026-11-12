@@ -29,19 +29,19 @@ export default class CajasMensualesController {
     return await useCase.execute(payload, tenantId);
   }
 
-  async recommendCajaMensual(suscriptorId: string, preferencias?: any, apiKey?: string): Promise<any> {
+  async recommendCajaMensual(suscriptorId: string, preferencias?: any): Promise<any> {
     const useCase = new RecommendCajaMensual();
-    return await useCase.execute(suscriptorId, preferencias, apiKey);
+    return await useCase.execute(suscriptorId, preferencias);
   }
 
-  async recommendCajaMensualGeneral(tenantId?: string, apiKey?: string): Promise<any> {
+  async recommendCajaMensualGeneral(tenantId?: string): Promise<any> {
     const useCase = new RecommendCajaMensualGeneral();
-    return await useCase.execute(tenantId, apiKey);
+    return await useCase.execute(tenantId);
   }
 
-  async recommendCajasExistentes(suscriptorId: string, apiKey?: string): Promise<any> {
+  async recommendCajasExistentes(suscriptorId: string): Promise<any> {
     const useCase = new RecommendCajasExistentes();
-    return await useCase.execute(suscriptorId, apiKey);
+    return await useCase.execute(suscriptorId);
   }
 
   async updateCajaMensual(id: string | number, payload: any, tenantId?: string): Promise<any> {

@@ -11,21 +11,6 @@
           Caja basada en lo que están comprando y solicitando todos tus clientes.
         </p>
 
-        <div class="form-group">
-          <label for="deepseekApiKey">API key de DeepSeek (solo para pruebas)</label>
-          <input
-            id="deepseekApiKey"
-            v-model="apiKey"
-            type="password"
-            placeholder="sk-..."
-            autocomplete="off"
-          />
-          <p class="api-key-hint">
-            Se guarda en tu navegador únicamente para probar la función de IA. Obtené una clave en
-            platform.deepseek.com.
-          </p>
-        </div>
-
         <div v-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
 
         <div v-if="recomendacion" class="recomendacion-resultado">
@@ -59,8 +44,6 @@
 import { ref, watch } from 'vue';
 import { cajasMensualesService, RecomendacionCajaDTO } from '../services/cajas-mensuales.service';
 
-const API_KEY_STORAGE = 'cc_deepseek_api_key';
-
 const props = defineProps<{
   isOpen: boolean;
 }>();
@@ -69,7 +52,6 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
-const apiKey = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
 const recomendacion = ref<RecomendacionCajaDTO | null>(null);
@@ -78,7 +60,6 @@ watch(
   () => props.isOpen,
   (abierta) => {
     if (abierta) {
-      apiKey.value = localStorage.getItem(API_KEY_STORAGE) || '';
       recomendacion.value = null;
       errorMessage.value = '';
     }
@@ -89,17 +70,10 @@ watch(
 const close = () => emit('close');
 
 const generar = async () => {
-  const clave = apiKey.value.trim();
-  if (!clave) {
-    errorMessage.value = 'Ingresá tu API key de DeepSeek para continuar (solo para pruebas).';
-    return;
-  }
-
-  localStorage.setItem(API_KEY_STORAGE, clave);
   errorMessage.value = '';
   loading.value = true;
   try {
-    const respuesta = await cajasMensualesService.recommendGeneral(clave);
+    const respuesta = await cajasMensualesService.recommendGeneral();
     recomendacion.value = respuesta.data;
   } catch (error) {
     const e = error as { response?: { data?: { message?: string } }; message?: string };
@@ -119,12 +93,6 @@ const generar = async () => {
   color: var(--color-dark);
   font-size: 0.95rem;
   margin: 0 0 1rem 0;
-}
-
-.api-key-hint {
-  font-size: 0.75rem;
-  color: var(--color-muted);
-  margin-top: 0.35rem;
 }
 
 .recomendacion-resultado {

@@ -5,7 +5,6 @@ import {
   createCajaMensualSchema,
   updateCajaMensualSchema,
   recommendCajaMensualSchema,
-  recommendCajaMensualGeneralSchema,
   recommendCajasExistentesSchema,
   cajaMensualIdParamSchema,
   periodoParamSchema,
@@ -94,8 +93,8 @@ class CajasMensualesRouter {
 
     router.post(`${this.BASE_URL}recomendar`, validateBody(recommendCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { suscriptorId, preferencias, apiKey } = req.body;
-        const result = await this.controller.recommendCajaMensual(suscriptorId, preferencias, apiKey);
+        const { suscriptorId, preferencias } = req.body;
+        const result = await this.controller.recommendCajaMensual(suscriptorId, preferencias);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
@@ -107,11 +106,9 @@ class CajasMensualesRouter {
       authMiddleware,
       requireRole(['admin']),
       tenantScopeMiddleware,
-      validateBody(recommendCajaMensualGeneralSchema),
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const { apiKey } = req.body;
-          const result = await this.controller.recommendCajaMensualGeneral(req.tenantId, apiKey);
+          const result = await this.controller.recommendCajaMensualGeneral(req.tenantId);
           res.status(200).json({ status: 'success', data: result });
         } catch (error) {
           next(error);
@@ -125,14 +122,13 @@ class CajasMensualesRouter {
       validateBody(recommendCajasExistentesSchema),
       async (req: Request, res: Response, next: NextFunction) => {
         try {
-          const { apiKey } = req.body;
           let suscriptorId = req.body.suscriptorId;
           if (req.user!.role === 'subscriptor') {
             suscriptorId = await this.linkedSuscriptorId(req);
           } else if (!suscriptorId) {
             throw new AppError('suscriptorId es requerido para recomendar cajas existentes', 400);
           }
-          const result = await this.controller.recommendCajasExistentes(suscriptorId, apiKey);
+          const result = await this.controller.recommendCajasExistentes(suscriptorId);
           res.status(200).json({ status: 'success', data: result });
         } catch (error) {
           next(error);
