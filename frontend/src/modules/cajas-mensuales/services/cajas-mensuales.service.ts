@@ -50,6 +50,11 @@ export interface RecomendacionCajaDTO {
   composiciones: ComposicionRecomendadaDTO[];
 }
 
+export interface CajaRecomendadaDTO {
+  cajaMensualId: string;
+  motivo: string;
+}
+
 export const cajasMensualesService = {
   async getAll(): Promise<ApiResponse<CajaMensualDTO[]>> {
     return apiClient.get('/cajas-mensuales');
@@ -85,5 +90,9 @@ export const cajasMensualesService = {
 
   async recommendGeneral(apiKey?: string): Promise<ApiResponse<RecomendacionCajaDTO>> {
     return apiClient.post('/cajas-mensuales/recomendar-general', { apiKey });
+  },
+
+  async recommendExistente(apiKey?: string): Promise<ApiResponse<CajaRecomendadaDTO[]>> {
+    return apiClient.post('/cajas-mensuales/recomendar-existentes', { apiKey });
   },
 };

@@ -19,7 +19,7 @@ interface DeepSeekChatResponse {
 }
 
 export class DeepSeekRecommendationClient {
-  async generarRecomendacion(prompt: string, apiKey: string): Promise<RecomendacionSugerida> {
+  async generarJson<T>(prompt: string, apiKey: string): Promise<T> {
     try {
       const respuesta = await axios.post<DeepSeekChatResponse>(
         `${envConfig.deepseek.baseUrl}/chat/completions`,
@@ -47,7 +47,7 @@ export class DeepSeekRecommendationClient {
         throw new AppError('El modelo no devolvió contenido en la respuesta', 502);
       }
 
-      return this.parsearJson(contenido);
+      return this.parsearJson<T>(contenido);
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new AppError('La API key de DeepSeek no es válida. Revisala y volvé a intentarlo.', 401);
@@ -60,12 +60,16 @@ export class DeepSeekRecommendationClient {
     }
   }
 
-  private parsearJson(contenido: string): RecomendacionSugerida {
-    const sinMarcas = contenido.replace(/```json|```/g, '').trim();
-    const recomendacion = JSON.parse(sinMarcas) as RecomendacionSugerida;
+  async generarRecomendacion(prompt: string, apiKey: string): Promise<RecomendacionSugerida> {
+    const recomendacion = await this.generarJson<RecomendacionSugerida>(prompt, apiKey);
     if (!Array.isArray(recomendacion.composiciones)) {
       throw new AppError('El modelo devolvió una estructura inválida', 502);
     }
     return recomendacion;
+  }
+
+  private parsearJson<T>(contenido: string): T {
+    const sinMarcas = contenido.replace(/```json|```/g, '').trim();
+    return JSON.parse(sinMarcas) as T;
   }
 }

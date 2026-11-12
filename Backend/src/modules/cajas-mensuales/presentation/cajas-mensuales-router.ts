@@ -6,12 +6,16 @@ import {
   updateCajaMensualSchema,
   recommendCajaMensualSchema,
   recommendCajaMensualGeneralSchema,
+  recommendCajasExistentesSchema,
   cajaMensualIdParamSchema,
   periodoParamSchema,
 } from "./caja-mensual.schema";
 import { authMiddleware, optionalAuthMiddleware } from "../../../common/middlewares/auth.middleware";
 import { requireRole } from "../../../common/middlewares/roles.middleware";
 import { tenantScopeMiddleware } from "../../../common/middlewares/tenant.middleware";
+import { AppError } from "../../../common/errors/app-error";
+import { getDataSource } from "../../../config/database.config";
+import { User } from "../../auth/infrastructure/user.entity";
 
 class CajasMensualesRouter {
   private router: Router;
@@ -25,6 +29,14 @@ class CajasMensualesRouter {
 
   public getRouter(): Router {
     return this.router;
+  }
+
+  private async linkedSuscriptorId(req: Request): Promise<string> {
+    const user = await getDataSource().getRepository(User).findOneBy({ id: req.user!.userId });
+    if (!user || !user.activo || !user.suscriptorId) {
+      throw new AppError('No existe un suscriptor vinculado', 403);
+    }
+    return user.suscriptorId;
   }
 
   public createRouter(): Router {
@@ -100,6 +112,27 @@ class CajasMensualesRouter {
         try {
           const { apiKey } = req.body;
           const result = await this.controller.recommendCajaMensualGeneral(req.tenantId, apiKey);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
+
+    router.post(
+      `${this.BASE_URL}recomendar-existentes`,
+      authMiddleware,
+      validateBody(recommendCajasExistentesSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { apiKey } = req.body;
+          let suscriptorId = req.body.suscriptorId;
+          if (req.user!.role === 'subscriptor') {
+            suscriptorId = await this.linkedSuscriptorId(req);
+          } else if (!suscriptorId) {
+            throw new AppError('suscriptorId es requerido para recomendar cajas existentes', 400);
+          }
+          const result = await this.controller.recommendCajasExistentes(suscriptorId, apiKey);
           res.status(200).json({ status: 'success', data: result });
         } catch (error) {
           next(error);

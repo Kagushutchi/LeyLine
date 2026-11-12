@@ -32,6 +32,11 @@ export const recommendCajaMensualGeneralSchema = z.object({
   apiKey: z.string().trim().min(1, 'La apiKey no puede estar vacía').optional(),
 });
 
+export const recommendCajasExistentesSchema = z.object({
+  suscriptorId: z.string().uuid('El suscriptorId debe ser un UUID válido').optional(),
+  apiKey: z.string().trim().min(1, 'La apiKey no puede estar vacía').optional(),
+});
+
 export const cajaMensualIdParamSchema = z.object({
   id: z.string().uuid('El ID debe ser un UUID válido'),
 });

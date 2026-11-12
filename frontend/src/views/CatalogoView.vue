@@ -120,6 +120,9 @@
     <!-- Divisor -->
     <div class="catalog-divider">
       <h2 class="section-title">Catálogo de Cajas Exclusivas</h2>
+      <button class="btn btn-accent btn-sm" :disabled="store.loading" @click="openRecomendacion">
+        ✨ Recomendar para mí
+      </button>
     </div>
 
     <!-- Catálogo de Cajas Disponibles -->
@@ -205,11 +208,17 @@
       @confirm="confirmCancel"
       @cancel="cancelTarget = null"
     />
+    <RecomendacionClienteModal
+      :is-open="isRecomendacionOpen"
+      :suscripciones-activas="suscripcionesActivas"
+      @close="isRecomendacionOpen = false"
+      @suscribir="onSuscribirRecomendada"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/common/store/auth.store';
 import { useSolicitudesStore, isTerminal } from '@/modules/suscripciones/store/solicitudes.store';
@@ -218,6 +227,7 @@ import { safeCheckoutUrl, hasInFlightRequest, pollDelayForAge, formatDay, format
 import type { EstadoSolicitud } from '@/modules/suscripciones/services/solicitudes.service';
 import type { CajaMensualDTO } from '@/modules/cajas-mensuales/services/cajas-mensuales.service';
 import { useCajasMensualesStore } from '@/modules/cajas-mensuales/store/cajas-mensuales.store';
+import RecomendacionClienteModal from '@/modules/cajas-mensuales/components/RecomendacionClienteModal.vue';
 import { suscripcionesService, SuscripcionDTO } from '@/modules/suscripciones/services/suscripciones.service';
 import { useToastStore } from '@/common/store/toast.store';
 
@@ -245,6 +255,13 @@ const errorSuscripciones = ref<string | null>(null);
 const actionLoading = ref<string | null>(null);
 const discarding = ref<string | null>(null);
 const cancelTarget = ref<string | null>(null);
+const isRecomendacionOpen = ref(false);
+
+const suscripcionesActivas = computed(() =>
+  misSuscripciones.value
+    .filter((s) => s.estado !== 'cancelada')
+    .map((s) => s.cajaMensualId)
+);
 
 const fetchMisSuscripciones = async () => {
   const generation = ++membershipGeneration;
@@ -399,6 +416,17 @@ const handleSubscribe = async (caja: CajaMensualDTO) => {
   } finally {
     actionLoading.value = null;
   }
+};
+
+const openRecomendacion = () => {
+  isRecomendacionOpen.value = true;
+};
+
+const onSuscribirRecomendada = async (cajaMensualId: string) => {
+  const caja = store.cajas.find((c) => c.id === cajaMensualId);
+  if (!caja) return;
+  isRecomendacionOpen.value = false;
+  await handleSubscribe(caja);
 };
 
 const handlePause = async (id: string) => {
@@ -617,6 +645,10 @@ const formatCategoria = (cat: string) =>
 }
 
 .catalog-divider {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1.5rem;
 }
 

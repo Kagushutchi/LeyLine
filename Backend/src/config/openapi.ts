@@ -548,6 +548,33 @@ export const openapiDocument = {
         },
       },
     },
+    '/api/cajas-mensuales/recomendar-existentes': {
+      post: {
+        tags: ['Cajas mensuales'],
+        summary: 'Recomendar cajas existentes según las preferencias del suscriptor',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  suscriptorId: { type: 'string', format: 'uuid', description: 'Solo para admin. Un suscriptor lo resuelve de su sesión.' },
+                  apiKey: { type: 'string', description: 'Clave de DeepSeek (solo para pruebas). Si se omite, se usa DEEPSEEK_API_KEY.' },
+                },
+              },
+              example: {
+                apiKey: 'sk-...',
+              },
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse('Recomendaciones generadas', 'CajasRecomendadas'),
+          400: errorResponse('Falta la API key'),
+        },
+      },
+    },
 
     '/api/productos': {
       get: {
@@ -878,6 +905,22 @@ export const openapiDocument = {
               precioBase: { type: 'number' },
               disponible: { type: 'boolean' },
               composiciones: { type: 'array', items: { type: 'object' } },
+            },
+          },
+        },
+      },
+      CajasRecomendadas: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', example: 'success' },
+          data: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                cajaMensualId: { type: 'string', format: 'uuid' },
+                motivo: { type: 'string' },
+              },
             },
           },
         },
