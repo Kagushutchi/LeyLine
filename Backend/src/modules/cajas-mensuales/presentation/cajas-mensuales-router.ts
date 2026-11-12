@@ -5,6 +5,7 @@ import {
   createCajaMensualSchema,
   updateCajaMensualSchema,
   recommendCajaMensualSchema,
+  recommendCajaMensualGeneralSchema,
   cajaMensualIdParamSchema,
   periodoParamSchema,
 } from "./caja-mensual.schema";
@@ -81,13 +82,30 @@ class CajasMensualesRouter {
 
     router.post(`${this.BASE_URL}recomendar`, validateBody(recommendCajaMensualSchema), async (req: Request, res: Response, next: NextFunction) => {
       try {
-        const { suscriptorId, preferencias } = req.body;
-        const result = await this.controller.recommendCajaMensual(suscriptorId, preferencias);
+        const { suscriptorId, preferencias, apiKey } = req.body;
+        const result = await this.controller.recommendCajaMensual(suscriptorId, preferencias, apiKey);
         res.status(200).json({ status: 'success', data: result });
       } catch (error) {
         next(error);
       }
     });
+
+    router.post(
+      `${this.BASE_URL}recomendar-general`,
+      authMiddleware,
+      requireRole(['admin']),
+      tenantScopeMiddleware,
+      validateBody(recommendCajaMensualGeneralSchema),
+      async (req: Request, res: Response, next: NextFunction) => {
+        try {
+          const { apiKey } = req.body;
+          const result = await this.controller.recommendCajaMensualGeneral(req.tenantId, apiKey);
+          res.status(200).json({ status: 'success', data: result });
+        } catch (error) {
+          next(error);
+        }
+      }
+    );
 
     router.put(
       `${this.BASE_URL}:id`,

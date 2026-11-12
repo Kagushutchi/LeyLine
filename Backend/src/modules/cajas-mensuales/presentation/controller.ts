@@ -3,6 +3,7 @@ import GetCajasMensuales from '../domain/useCase/get-cajas-mensuales';
 import { GetCajaMensualById } from '../domain/useCase/get-caja-mensual-by-id';
 import { GetCajasByMesAnio } from '../domain/useCase/get-cajas-by-mes-anio';
 import RecommendCajaMensual from '../domain/useCase/recommend-caja-mensual';
+import RecommendCajaMensualGeneral from '../domain/useCase/recommend-caja-mensual-general';
 import UpdateCajaMensual from '../domain/useCase/update-caja-mensual';
 import DeleteCajaMensual from '../domain/useCase/delete-caja-mensual';
 
@@ -27,9 +28,14 @@ export default class CajasMensualesController {
     return await useCase.execute(payload, tenantId);
   }
 
-  async recommendCajaMensual(suscriptorId: string, preferencias?: any): Promise<any> {
+  async recommendCajaMensual(suscriptorId: string, preferencias?: any, apiKey?: string): Promise<any> {
     const useCase = new RecommendCajaMensual();
-    return await useCase.execute(suscriptorId, preferencias);
+    return await useCase.execute(suscriptorId, preferencias, apiKey);
+  }
+
+  async recommendCajaMensualGeneral(tenantId?: string, apiKey?: string): Promise<any> {
+    const useCase = new RecommendCajaMensualGeneral();
+    return await useCase.execute(tenantId, apiKey);
   }
 
   async updateCajaMensual(id: string | number, payload: any, tenantId?: string): Promise<any> {

@@ -50,4 +50,9 @@ export const envConfig = {
     expiresIn: process.env.JWT_EXPIRES_IN || '15m',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
+  deepseek: {
+    apiKey: process.env.DEEPSEEK_API_KEY || '',
+    model: process.env.DEEPSEEK_MODEL || 'deepseek-chat',
+    baseUrl: process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com',
+  },
 };

@@ -1,32 +1,76 @@
-import { CajaMensual } from "../../infrastructure/caja-mensual.entity";
-import { CajaMensualRepository } from "../../infrastructure/caja-mensual-repository";
-import { AppError } from "../../../../common/errors/app-error";
+import { AppError } from '../../../../common/errors/app-error';
+import { envConfig } from '../../../../config/env.config';
+import { Producto } from '../../../productos/infrastructure/producto.entity';
+import { ProductoRepository } from '../../../productos/infrastructure/producto-repository';
+import { SuscriptorRepository } from '../../../suscriptores/infrastructure/suscriptor-repository';
+import { DeepSeekRecommendationClient } from '../../client/deepseek-recommendation-client';
+import { RecomendacionCajaMensual, armarRecomendacion, construirCatalogoResumido } from './recomendacion.shared';
 
 export default class RecommendCajaMensual {
-  private repository: CajaMensualRepository;
+  private readonly suscriptorRepository = new SuscriptorRepository();
+  private readonly productoRepository = new ProductoRepository();
+  private readonly clienteIA = new DeepSeekRecommendationClient();
 
-  constructor() {
-    this.repository = new CajaMensualRepository();
-  }
-
-  async execute(suscriptorId: string, preferencias?: any): Promise<Partial<CajaMensual>> {
-    if (!suscriptorId) {
-      throw new AppError('El ID del suscriptor es requerido para generar la recomendación personalizada', 400);
+  async execute(
+    suscriptorId: string,
+    preferencias?: Record<string, unknown>,
+    apiKey?: string
+  ): Promise<RecomendacionCajaMensual> {
+    const clave = apiKey || envConfig.deepseek.apiKey;
+    if (!clave) {
+      throw new AppError(
+        'Para generar una recomendación con IA necesitás una API key de DeepSeek. Configurá DEEPSEEK_API_KEY en el entorno o enviá "apiKey" en la solicitud (solo para pruebas).',
+        400
+      );
     }
 
-    // Lógica de armado y personalización con algoritmo heurístico / perfil organoléptico
-    const categoriaPreferida = preferencias?.categoria || 'vinos';
-    const ahora = new Date();
+    const suscriptor = await this.suscriptorRepository.findOneById(suscriptorId);
+    if (!suscriptor) {
+      throw new AppError('Suscriptor no encontrado', 404);
+    }
 
-    return {
-      nombre: `Caja Curada Personalizada - ${categoriaPreferida.toUpperCase()}`,
-      categoria: categoriaPreferida,
-      mes: ahora.getMonth() + 1,
-      anio: ahora.getFullYear(),
-      descripcion: `Selección curada en base a las preferencias organolépticas del suscriptor (${suscriptorId})`,
-      precioBase: 12500.00,
-      disponible: true,
-      composiciones: [],
+    const preferenciasEfectivas = {
+      ...(suscriptor.preferenciasOrganolepticas || {}),
+      ...(preferencias || {}),
     };
+
+    const categoria = String(preferenciasEfectivas.categoria || 'vinos');
+    const catalogo = (await this.productoRepository.findAll(suscriptor.tenantId)).filter(
+      (producto) => producto.activo && producto.categoria === categoria
+    );
+
+    if (catalogo.length === 0) {
+      throw new AppError(`No hay productos activos para la categoría ${categoria}`, 404);
+    }
+
+    const sugerencia = await this.clienteIA.generarRecomendacion(
+      this.construirPrompt(preferenciasEfectivas, catalogo),
+      clave
+    );
+
+    return armarRecomendacion(sugerencia, catalogo, categoria);
+  }
+
+  private construirPrompt(preferencias: Record<string, unknown>, catalogo: Producto[]): string {
+    return JSON.stringify({
+      tarea: 'Seleccioná entre 3 y 5 productos para armar una caja mensual personalizada para el suscriptor.',
+      preferenciasDelSuscriptor: preferencias,
+      catalogoDisponible: construirCatalogoResumido(catalogo),
+      respuestaEsperada: {
+        nombre: 'string con un nombre atractivo para la caja',
+        descripcion: 'string breve explicando por qué se eligieron esos productos',
+        composiciones: [
+          {
+            productoId: 'id exacto del catálogo',
+            cantidad: 'número entero entre 1 y 3',
+          },
+        ],
+      },
+      reglas: [
+        'Usá solo productos del catálogo, con su productoId exacto.',
+        'Respetá las alergias y restricciones del suscriptor.',
+        'Priorizá productos cuyas notas de cata coincidan con el perfil de sabor del suscriptor.',
+      ],
+    });
   }
 }

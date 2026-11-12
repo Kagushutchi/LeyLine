@@ -25,6 +25,11 @@ export const updateCajaMensualSchema = createCajaMensualSchema.partial();
 export const recommendCajaMensualSchema = z.object({
   suscriptorId: z.string().uuid('El suscriptorId debe ser un UUID válido'),
   preferencias: z.record(z.string(), z.unknown()).optional(),
+  apiKey: z.string().trim().min(1, 'La apiKey no puede estar vacía').optional(),
+});
+
+export const recommendCajaMensualGeneralSchema = z.object({
+  apiKey: z.string().trim().min(1, 'La apiKey no puede estar vacía').optional(),
 });
 
 export const cajaMensualIdParamSchema = z.object({

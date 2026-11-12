@@ -31,6 +31,25 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
+export interface ComposicionRecomendadaDTO {
+  productoId: string;
+  productoNombre: string;
+  cantidad: number;
+  orden: number;
+  precioAplicado?: number;
+}
+
+export interface RecomendacionCajaDTO {
+  nombre: string;
+  categoria: string;
+  mes: number;
+  anio: number;
+  descripcion?: string;
+  precioBase: number;
+  disponible: boolean;
+  composiciones: ComposicionRecomendadaDTO[];
+}
+
 export const cajasMensualesService = {
   async getAll(): Promise<ApiResponse<CajaMensualDTO[]>> {
     return apiClient.get('/cajas-mensuales');
@@ -56,7 +75,15 @@ export const cajasMensualesService = {
     return apiClient.delete(`/cajas-mensuales/${id}`);
   },
 
-  async recommend(suscriptorId: string, preferencias: unknown): Promise<ApiResponse<Partial<CajaMensualDTO>>> {
-    return apiClient.post('/cajas-mensuales/recomendar', { suscriptorId, preferencias });
+  async recommend(
+    suscriptorId: string,
+    preferencias: unknown,
+    apiKey?: string
+  ): Promise<ApiResponse<RecomendacionCajaDTO>> {
+    return apiClient.post('/cajas-mensuales/recomendar', { suscriptorId, preferencias, apiKey });
+  },
+
+  async recommendGeneral(apiKey?: string): Promise<ApiResponse<RecomendacionCajaDTO>> {
+    return apiClient.post('/cajas-mensuales/recomendar-general', { apiKey });
   },
 };

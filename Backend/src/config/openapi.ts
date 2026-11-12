@@ -505,11 +505,13 @@ export const openapiDocument = {
                 properties: {
                   suscriptorId: { type: 'string', format: 'uuid' },
                   preferencias: { type: 'object', additionalProperties: true },
+                  apiKey: { type: 'string', description: 'Clave de DeepSeek (solo para pruebas). Si se omite, se usa DEEPSEEK_API_KEY.' },
                 },
               },
               example: {
                 suscriptorId: '11111111-1111-4111-8111-111111111111',
                 preferencias: { categoria: 'vinos', intensidad: 'alta' },
+                apiKey: 'sk-...',
               },
             },
           },
@@ -517,6 +519,32 @@ export const openapiDocument = {
         responses: {
           200: jsonResponse('Recomendación generada', 'CajaMensualRecomendada'),
           400: errorResponse('Suscriptor inválido'),
+        },
+      },
+    },
+    '/api/cajas-mensuales/recomendar-general': {
+      post: {
+        tags: ['Cajas mensuales'],
+        summary: 'Generar una recomendación de caja según la demanda de todos los suscriptores',
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  apiKey: { type: 'string', description: 'Clave de DeepSeek (solo para pruebas). Si se omite, se usa DEEPSEEK_API_KEY.' },
+                },
+              },
+              example: {
+                apiKey: 'sk-...',
+              },
+            },
+          },
+        },
+        responses: {
+          200: jsonResponse('Recomendación generada', 'CajaMensualRecomendada'),
+          400: errorResponse('Falta la API key'),
         },
       },
     },

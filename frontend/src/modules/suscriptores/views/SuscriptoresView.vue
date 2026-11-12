@@ -5,9 +5,14 @@
         <h1 class="view-title">Suscriptores (Clientes)</h1>
         <p class="view-subtitle">Gestión de miembros exclusivos y registro de perfil organoléptico.</p>
       </div>
-      <button v-if="authStore.isAdmin" class="btn btn-primary" @click="openCreateModal">
-        + Nuevo Suscriptor
-      </button>
+      <div v-if="authStore.isAdmin" class="header-actions">
+        <button class="btn btn-accent" @click="openRecomendacionGeneral">
+          ✦ Recomendar caja global
+        </button>
+        <button class="btn btn-primary" @click="openCreateModal">
+          + Nuevo Suscriptor
+        </button>
+      </div>
     </div>
 
     <!-- Estado de Carga -->
@@ -73,6 +78,9 @@
             </td>
             <td>
               <div v-if="authStore.isAdmin" class="actions-cell">
+                <button class="btn btn-accent btn-sm" @click="openRecomendacion(item)">
+                  Recomendar
+                </button>
                 <button class="btn btn-secondary btn-sm" @click="openEditModal(item)">
                   Modificar
                 </button>
@@ -106,6 +114,19 @@
       @confirm="handleDelete"
       @cancel="isDeleteModalOpen = false"
     />
+
+    <!-- Modal Recomendación con IA -->
+    <RecomendacionCajaModal
+      :is-open="isRecomendacionOpen"
+      :suscriptor="suscriptorRecomendacion"
+      @close="isRecomendacionOpen = false"
+    />
+
+    <!-- Modal Recomendación General del Club -->
+    <RecomendacionGeneralModal
+      :is-open="isRecomendacionGeneralOpen"
+      @close="isRecomendacionGeneralOpen = false"
+    />
   </div>
 </template>
 
@@ -116,6 +137,8 @@ import { useToastStore } from '@/common/store/toast.store';
 import { SuscriptorDTO } from '../services/suscriptores.service';
 import SuscriptorModal from '../components/SuscriptorModal.vue';
 import ConfirmModal from '@/common/components/ConfirmModal.vue';
+import RecomendacionCajaModal from '@/modules/cajas-mensuales/components/RecomendacionCajaModal.vue';
+import RecomendacionGeneralModal from '@/modules/cajas-mensuales/components/RecomendacionGeneralModal.vue';
 import { useAuthStore } from '@/common/store/auth.store';
 
 const store = useSuscriptoresStore();
@@ -129,6 +152,11 @@ const isSaving = ref(false);
 const isDeleteModalOpen = ref(false);
 const itemToDelete = ref<SuscriptorDTO | null>(null);
 const isDeleting = ref(false);
+
+const isRecomendacionOpen = ref(false);
+const suscriptorRecomendacion = ref<SuscriptorDTO | null>(null);
+
+const isRecomendacionGeneralOpen = ref(false);
 
 onMounted(() => {
   store.fetchSuscriptores();
@@ -149,6 +177,15 @@ const openCreateModal = () => {
 const openEditModal = (item: SuscriptorDTO) => {
   selectedItem.value = item;
   isModalOpen.value = true;
+};
+
+const openRecomendacion = (item: SuscriptorDTO) => {
+  suscriptorRecomendacion.value = item;
+  isRecomendacionOpen.value = true;
+};
+
+const openRecomendacionGeneral = () => {
+  isRecomendacionGeneralOpen.value = true;
 };
 
 const handleSave = async (payload: Partial<SuscriptorDTO>) => {
@@ -194,6 +231,12 @@ const handleDelete = async () => {
 </script>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
 .member-name {
   font-weight: 600;
   color: var(--color-dark);
