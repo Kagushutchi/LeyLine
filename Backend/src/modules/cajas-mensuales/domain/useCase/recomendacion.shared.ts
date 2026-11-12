@@ -1,3 +1,5 @@
+import { AppError } from '../../../../common/errors/app-error';
+import { envConfig } from '../../../../config/env.config';
 import { Producto } from '../../../productos/infrastructure/producto.entity';
 import { RecomendacionSugerida } from '../../client/deepseek-recommendation-client';
 
@@ -18,6 +20,14 @@ export interface RecomendacionCajaMensual {
   precioBase: number;
   disponible: boolean;
   composiciones: ComposicionRecomendada[];
+}
+
+export function obtenerApiKey(): string {
+  const clave = envConfig.deepseek.apiKey;
+  if (!clave) {
+    throw new AppError('Falta configurar DEEPSEEK_API_KEY en el entorno (.env)', 400);
+  }
+  return clave;
 }
 
 export function construirCatalogoResumido(catalogo: Producto[]) {

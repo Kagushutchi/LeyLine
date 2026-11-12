@@ -82,17 +82,16 @@ export const cajasMensualesService = {
 
   async recommend(
     suscriptorId: string,
-    preferencias: unknown,
-    apiKey?: string
+    preferencias: unknown
   ): Promise<ApiResponse<RecomendacionCajaDTO>> {
-    return apiClient.post('/cajas-mensuales/recomendar', { suscriptorId, preferencias, apiKey });
+    return apiClient.post('/cajas-mensuales/recomendar', { suscriptorId, preferencias });
   },
 
-  async recommendGeneral(apiKey?: string): Promise<ApiResponse<RecomendacionCajaDTO>> {
-    return apiClient.post('/cajas-mensuales/recomendar-general', { apiKey });
+  async recommendGeneral(): Promise<ApiResponse<RecomendacionCajaDTO>> {
+    return apiClient.post('/cajas-mensuales/recomendar-general');
   },
 
-  async recommendExistente(apiKey?: string): Promise<ApiResponse<CajaRecomendadaDTO[]>> {
-    return apiClient.post('/cajas-mensuales/recomendar-existentes', { apiKey });
+  async recommendExistente(): Promise<ApiResponse<CajaRecomendadaDTO[]>> {
+    return apiClient.post('/cajas-mensuales/recomendar-existentes');
   },
 };

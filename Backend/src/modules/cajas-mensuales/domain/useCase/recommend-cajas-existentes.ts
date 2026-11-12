@@ -1,9 +1,9 @@
 import { AppError } from '../../../../common/errors/app-error';
-import { envConfig } from '../../../../config/env.config';
 import { SuscriptorRepository } from '../../../suscriptores/infrastructure/suscriptor-repository';
 import { DeepSeekRecommendationClient } from '../../client/deepseek-recommendation-client';
 import { CajaMensual } from '../../infrastructure/caja-mensual.entity';
 import { CajaMensualRepository } from '../../infrastructure/caja-mensual-repository';
+import { obtenerApiKey } from './recomendacion.shared';
 
 export interface CajaRecomendada {
   cajaMensualId: string;
@@ -19,14 +19,8 @@ export default class RecommendCajasExistentes {
   private readonly cajaRepository = new CajaMensualRepository();
   private readonly clienteIA = new DeepSeekRecommendationClient();
 
-  async execute(suscriptorId: string, apiKey?: string): Promise<CajaRecomendada[]> {
-    const clave = apiKey || envConfig.deepseek.apiKey;
-    if (!clave) {
-      throw new AppError(
-        'Para recomendar cajas con IA necesitás una API key de DeepSeek. Configurá DEEPSEEK_API_KEY en el entorno o enviá "apiKey" en la solicitud (solo para pruebas).',
-        400
-      );
-    }
+  async execute(suscriptorId: string): Promise<CajaRecomendada[]> {
+    const clave = obtenerApiKey();
 
     const suscriptor = await this.suscriptorRepository.findOneById(suscriptorId);
     if (!suscriptor) {

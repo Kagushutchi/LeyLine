@@ -11,20 +11,6 @@
           Según tus preferencias, estas cajas podrían gustarte.
         </p>
 
-        <div class="form-group">
-          <label for="deepseekApiKey">API key de DeepSeek (solo para pruebas)</label>
-          <input
-            id="deepseekApiKey"
-            v-model="apiKey"
-            type="password"
-            placeholder="sk-..."
-            autocomplete="off"
-          />
-          <p class="api-key-hint">
-            Se guarda en tu navegador únicamente para probar la función de IA.
-          </p>
-        </div>
-
         <div v-if="errorMessage" class="alert alert-danger">{{ errorMessage }}</div>
 
         <div v-if="recomendacionesConCaja.length" class="recomendaciones-lista">
@@ -63,8 +49,6 @@ import { ref, computed, watch } from 'vue';
 import { cajasMensualesService, CajaRecomendadaDTO, CajaMensualDTO } from '../services/cajas-mensuales.service';
 import { useCajasMensualesStore } from '../store/cajas-mensuales.store';
 
-const API_KEY_STORAGE = 'cc_deepseek_api_key';
-
 const props = defineProps<{
   isOpen: boolean;
   suscripcionesActivas: string[];
@@ -77,7 +61,6 @@ const emit = defineEmits<{
 
 const store = useCajasMensualesStore();
 
-const apiKey = ref('');
 const loading = ref(false);
 const errorMessage = ref('');
 const recomendaciones = ref<CajaRecomendadaDTO[]>([]);
@@ -96,7 +79,6 @@ watch(
   () => props.isOpen,
   (abierta) => {
     if (abierta) {
-      apiKey.value = localStorage.getItem(API_KEY_STORAGE) || '';
       recomendaciones.value = [];
       errorMessage.value = '';
     }
@@ -114,20 +96,13 @@ const alreadySubscribed = (cajaId: string) => props.suscripcionesActivas.include
 const suscribir = (cajaMensualId: string) => emit('suscribir', cajaMensualId);
 
 const generar = async () => {
-  const clave = apiKey.value.trim();
-  if (!clave) {
-    errorMessage.value = 'Ingresá tu API key de DeepSeek para continuar (solo para pruebas).';
-    return;
-  }
-
-  localStorage.setItem(API_KEY_STORAGE, clave);
   errorMessage.value = '';
   loading.value = true;
   try {
     if (store.cajas.length === 0) {
       await store.fetchCajas();
     }
-    const respuesta = await cajasMensualesService.recommendExistente(clave);
+    const respuesta = await cajasMensualesService.recommendExistente();
     recomendaciones.value = Array.isArray(respuesta.data) ? respuesta.data : [];
   } catch (error) {
     const e = error as { response?: { data?: { message?: string } }; message?: string };
@@ -147,12 +122,6 @@ const generar = async () => {
   color: var(--color-dark);
   font-size: 0.95rem;
   margin: 0 0 1rem 0;
-}
-
-.api-key-hint {
-  font-size: 0.75rem;
-  color: var(--color-muted);
-  margin-top: 0.35rem;
 }
 
 .recomendaciones-lista {
