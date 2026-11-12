@@ -24,7 +24,7 @@
       </div>
 
       <div v-else-if="misSuscripciones.length === 0" class="empty-subs-box">
-        <span class="empty-icon">🍷</span>
+        <span class="empty-icon"></span>
         <p class="empty-subs-text">Aún no tienes suscripciones activas vinculadas a tu cuenta.</p>
         <p class="empty-subs-hint">Elige una de las cajas exclusivas del catálogo a continuación para comenzar tu experiencia.</p>
       </div>
@@ -43,7 +43,7 @@
           </div>
           <div class="sub-meta">
             <span v-if="sub.proximoCobro" class="meta-item">
-              📅 Próximo cobro: {{ formatDay(sub.proximoCobro) }}
+              Próximo cobro: {{ formatDay(sub.proximoCobro) }}
             </span>
           </div>
           <p v-if="sub.pausadaPorPago" class="sub-warning" role="alert">
@@ -121,7 +121,7 @@
     <div class="catalog-divider">
       <h2 class="section-title">Catálogo de Cajas Exclusivas</h2>
       <button class="btn btn-accent btn-sm" :disabled="store.loading" @click="openRecomendacion">
-        ✨ Recomendar para mí
+        Recomendar para mí
       </button>
     </div>
 

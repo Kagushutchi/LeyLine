@@ -107,7 +107,7 @@ watch(
 const close = () => emit('close');
 
 const formatCategoria = (categoria: string) =>
-  ({ vinos: '🍷 Vinos', cafes: '☕ Cafés', cervezas: '🍺 Cervezas' }[categoria] || categoria);
+  ({ vinos: 'Vinos', cafes: 'Cafés', cervezas: 'Cervezas' }[categoria] || categoria);
 
 const alreadySubscribed = (cajaId: string) => props.suscripcionesActivas.includes(cajaId);
 
