@@ -17,6 +17,19 @@ interface ConsultarInventarioResponse {
   inventario: InventarioDTO;
 }
 
+export interface ReservaStockDTO {
+  exito: boolean;
+  productoId: string;
+  cantidadSolicitada: number;
+  cantidadDisponible: number;
+  cantidadReservada: number;
+  mensaje: string;
+}
+
+interface ReservarStockResponse {
+  reserva: ReservaStockDTO;
+}
+
 export class InventarioSoapClient {
   private static clientPromise: Promise<soap.Client> | null = null;
 
@@ -44,6 +57,23 @@ export class InventarioSoapClient {
       const message = error instanceof Error ? error.message : String(error);
       logger.error(`Error al consultar inventario SOAP para ${productoId}: ${message}`);
       throw new AppError('No se pudo consultar el inventario del productor', 503);
+    }
+  }
+
+  /** Reserva stock de un producto vía SOAP (operación `reservarStock` del WSDL de inventario). */
+  async reservarStock(productoId: string, cantidad: number): Promise<ReservaStockDTO> {
+    try {
+      const client = await this.getClient();
+      const [response] = (await client.reservarStockAsync({
+        productoId,
+        cantidad,
+      })) as [ReservarStockResponse];
+
+      return response.reserva;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger.error(`Error al reservar stock SOAP para ${productoId}: ${message}`);
+      throw new AppError('No se pudo reservar el stock del productor', 503);
     }
   }
 }

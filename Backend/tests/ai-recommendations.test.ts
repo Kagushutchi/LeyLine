@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataSource } from 'typeorm';
 
 // El cliente de DeepSeek usa axios por debajo; lo mockeamos una sola vez para
@@ -45,6 +45,21 @@ afterAll(async () => {
 
 afterEach(() => {
   axiosPost.mockReset();
+});
+
+// El DataSource es compartido por todo el archivo (una sola vez en beforeAll), así que sin
+// esto las filas de un test quedan visibles para el siguiente — por ejemplo, una CajaMensual
+// creada en un test anterior hacía que "no hay cajas disponibles" dejara de ser cierto.
+beforeEach(async () => {
+  const { CajaMensualProducto } = await import('../src/modules/cajas-mensuales/infrastructure/caja-mensual-producto.entity');
+  const { CajaMensual } = await import('../src/modules/cajas-mensuales/infrastructure/caja-mensual.entity');
+  const { Producto } = await import('../src/modules/productos/infrastructure/producto.entity');
+  const { Suscriptor } = await import('../src/modules/suscriptores/infrastructure/suscriptor.entity');
+
+  await dataSource.getRepository(CajaMensualProducto).clear();
+  await dataSource.getRepository(CajaMensual).clear();
+  await dataSource.getRepository(Producto).clear();
+  await dataSource.getRepository(Suscriptor).clear();
 });
 
 /** Siembra un suscriptor, un producto de vinos activo y, opcionalmente, una caja mensual con ese producto. */
@@ -219,15 +234,19 @@ describe('RecommendCajaMensual (recomendación personalizada por suscriptor)', (
   });
 
   it('responde 400 si falta configurar DEEPSEEK_API_KEY', async () => {
-    const previa = process.env.DEEPSEEK_API_KEY;
-    delete process.env.DEEPSEEK_API_KEY;
-    vi.resetModules();
+    // envConfig.deepseek.apiKey se captura una sola vez de process.env al importar el módulo,
+    // así que cambiar process.env después no alcanza. En vez de vi.resetModules() (que limpia
+    // TODO el cache de módulos del archivo y rompe los tests siguientes: las entidades se
+    // re-importan como clases nuevas que el DataSource ya inicializado no reconoce), mutamos
+    // directamente el objeto — envConfig es un literal plano, no congelado — y lo restauramos.
+    const { envConfig } = await import('../src/config/env.config');
+    const RecommendCajaMensual = (await import('../src/modules/cajas-mensuales/domain/useCase/recommend-caja-mensual')).default;
+    const previa = envConfig.deepseek.apiKey;
+    envConfig.deepseek.apiKey = '';
     try {
-      const RecommendCajaMensual = (await import('../src/modules/cajas-mensuales/domain/useCase/recommend-caja-mensual')).default;
       await expect(new RecommendCajaMensual().execute('cualquier-id')).rejects.toMatchObject({ statusCode: 400 });
     } finally {
-      process.env.DEEPSEEK_API_KEY = previa;
-      vi.resetModules();
+      envConfig.deepseek.apiKey = previa;
     }
   });
 });
