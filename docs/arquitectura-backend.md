@@ -99,17 +99,18 @@ flowchart LR
 
     F[Factory] --> DB
     STR[Strategy de pagos] -. extensión futura .-> PAY[Stripe / MercadoPago]
-    EVT[EventDispatcher] -. eventos en memoria .-> MSG[RabbitMQ / Kafka]
-    FAC[SubscriptionPackFacade] -. orquestación preparada .-> EXT[Pagos + inventario + despacho]
+    EVT[EventDispatcher] -. evento SuscripcionActivada .-> SOAP[Reserva de stock SOAP]
+    FAC[SubscriptionPackFacade] -- orquesta --> EVT
+    FAC -- orquesta --> STR
 ```
 
 | Decisión | Responsabilidad | Estado actual |
 |---|---|---|
 | Repository | Aislar consultas y persistencia | Implementado |
 | Factory | Elegir SQLite o PostgreSQL | Implementado |
-| Strategy | Permitir proveedores de pago intercambiables | Contrato preparado; sin proveedor integrado |
-| Observer / EventDispatcher | Desacoplar eventos de dominio | Dispatcher en memoria |
-| Facade | Orquestar suscripción, pago, inventario y despacho | Estructura preparada; flujo pendiente |
+| Strategy | Permitir proveedores de pago intercambiables | Implementado (`createPaymentStrategy()`; `none`/`fake`/`stripe`) |
+| Observer / EventDispatcher | Desacoplar eventos de dominio | Implementado; listener real registrado por `SubscriptionPackFacade` (reserva de stock por SOAP) |
+| Facade | Orquestar suscripción, pago, inventario y despacho | Implementado (`SubscriptionPackFacade.activateSubscriptionAndPrepareFirstBox`) |
 
 ## 6. Regla de dependencia
 

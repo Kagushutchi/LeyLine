@@ -12,13 +12,13 @@
 - **Colas de Mensajería (RabbitMQ)**: Patrón outbox/inbox en `modules/solicitudes-suscripcion`. El evento de alta de suscripción dispara el cobro recurrente (Strategy) y, una vez aprobado, la actualización de inventario.
 - **API Externa de Pagos**: Stripe Subscriptions (patrón Strategy) para la facturación automática recurrente, con checkout, webhooks propios y reconciliación de eventos. `FakePaymentStrategy` disponible para demos/tests sin red.
 - **Componente de IA**: recomendador basado en DeepSeek (`DeepSeekRecommendationClient`, API compatible con OpenAI, `response_format: json_object`) con 3 endpoints reales: recomendación personalizada por suscriptor, recomendación agregada para el club y selección entre cajas ya existentes. Con tests dedicados (`Backend/tests/ai-recommendations.test.ts`) que mockean el modelo.
-- **Patrones de diseño implementados**: Repository, Factory (`DatabaseFactory`) y Strategy (pagos) están aplicados y usados en producción. Observer (`EventDispatcher`) y Facade (`SubscriptionPackFacade`) están **con la estructura preparada pero sin implementar** — ver [Alcance de esta entrega](#alcance-y-limitaciones-de-esta-entrega) más abajo.
+- **Patrones de diseño implementados**: Repository, Factory (`DatabaseFactory`), Strategy (pagos), Observer (`EventDispatcher`) y Facade (`SubscriptionPackFacade`) están todos aplicados y usados en producción.
 
 ---
 
 ## Documentación de Arquitectura y Scaffolding
 
-Para ver la explicación detallada de la arquitectura modular, patrones de diseño aplicados (Repository, Factory, Strategy; Observer y Facade como estructura preparada), configuración de persistencia dual (SQLite / PostgreSQL) y guía de ejecución local o con Docker, consulta el archivo:
+Para ver la explicación detallada de la arquitectura modular, patrones de diseño aplicados (Repository, Factory, Strategy, Observer y Facade), configuración de persistencia dual (SQLite / PostgreSQL) y guía de ejecución local o con Docker, consulta el archivo:
 
 **[ARCHITECTURE.md](ARCHITECTURE.md)**
 
@@ -197,23 +197,22 @@ npm run typecheck   # tsc / vue-tsc sin emitir
 npm test            # Vitest (unitarias + integración)
 ```
 
-El Backend incluye, entre otros, tests de pagos (`test/payments.test.cjs`, Strategy + webhooks) y del componente de IA
+El Backend incluye, entre otros, tests de pagos (`test/payments.test.cjs`, Strategy + webhooks), del componente de IA
 (`tests/ai-recommendations.test.ts`: los 3 casos de uso de recomendación y `DeepSeekRecommendationClient`, con el modelo
-mockeado — nunca llaman a la red real). El workflow de CI en `.github/workflows/ci.yml` ejecuta `lint`, `typecheck` y `test`
-en cada push y pull request.
+mockeado — nunca llaman a la red real) y del Facade de orquestación (`tests/subscription-pack-facade.test.ts`: alta con y
+sin cobro, caja inexistente, y tolerancia a una reserva de stock SOAP fallida). El workflow de CI en
+`.github/workflows/ci.yml` ejecuta `lint`, `typecheck` y `test` en cada push y pull request.
 
 ---
 
-## Alcance y limitaciones de esta entrega
+## Alcance de esta entrega
 
-Decisión del equipo para la Segunda Entrega del TP: **no se implementa el patrón Facade** (`SubscriptionPackFacade`,
-`Backend/src/common/patterns/facades/subscription-pack.facade.ts`). Hoy sigue devolviendo
-`ACTIVATION_PENDING_IMPLEMENTATION`; todo lo que necesitaría orquestar (alta de suscripción, SOAP de inventario, cobro
-Strategy, cola RabbitMQ) ya existe y funciona de forma independiente a través de los flujos reales (`POST /api/suscripciones`,
-`POST /api/solicitudes-suscripcion`), así que no bloquea ninguna funcionalidad — queda como deuda técnica documentada, no
-como una feature rota. En consecuencia:
+El patrón **Facade** (`SubscriptionPackFacade`, `Backend/src/common/patterns/facades/subscription-pack.facade.ts`) orquesta
+la activación de una suscripción y el disparo de su primer envío: alta de suscripción + validación de inventario vía SOAP
+(reusando `CreateSuscripcion`), cobro recurrente inicial vía Strategy si hay un proveedor de pago configurado, y el evento
+de dominio de la orden de empaque vía el patrón **Observer** (`EventDispatcher`), cuyo listener reserva stock por SOAP
+(`InventarioSoapClient.reservarStock`) para cada producto de la caja. Es un camino alternativo al flujo asincrónico real por
+cola (`solicitudes-suscripcion` + `ProcesarSolicitud` + RabbitMQ) — pensado para una activación directa (panel de admin o
+demo) — y reusa sus mismos componentes en vez de duplicar lógica de negocio; no reemplaza ese flujo real.
 
-- El patrón **Observer** (`EventDispatcher`, en memoria) tampoco tiene ningún `.subscribe()`/`.dispatch()` real conectado.
-- Las operaciones SOAP `reservarStock` y `actualizarInventario` siguen expuestas en el WSDL pero sin ningún caller en el código (solo `consultarInventario` se usa, desde el alta de suscripción).
-
-El detalle y la justificación completa están en [docs/pendientes-tp2.md](docs/pendientes-tp2.md).
+El detalle está en [docs/pendientes-tp2.md](docs/pendientes-tp2.md).
