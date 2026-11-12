@@ -1,54 +1,39 @@
 # LeyLine — Pendientes TP Segunda Parte
 
-*2026-11-09*
+*Actualizado 2026-11-12, contra `main` (0bedb15)*
 
-Esta lista es contra `docs/TP.md` (requisitos de la Segunda Parte) y el código real en `feature/integracion-ramas`, que es el merge de `feature/integrar-auth-multitenancy` + `feature/queue` + soft-delete.
+Esta lista es contra `docs/TP.md` (requisitos de la Segunda Parte) y el código real en `main`, ya con los merges de Stripe (`feature/pagos-stripe`) y el recomendador IA con DeepSeek.
 
 **Ya cerrado, no tocar salvo bug:**
 - SOAP de inventario (WSDL + `consultarInventario`/`reservarStock`/`actualizarInventario`), consumido desde el alta de suscripción.
-- 5 routers REST documentados con OpenAPI/Swagger.
+- Routers REST documentados con OpenAPI/Swagger.
 - Cola de mensajería real: RabbitMQ + patrón outbox/inbox en `modules/solicitudes-suscripcion`, con worker, reconciler de reintentos, migraciones y tests.
 - Patrones Repository y Factory (`DatabaseFactory`) implementados de verdad, no solo nombrados.
 - Auth JWT + multi-tenancy + RBAC.
+- **Stripe como API externa (Pendiente 1 anterior, resuelto):** `StripePaymentStrategy` + `PaymentStrategyRegistry` (selección por `PAYMENT_PROVIDER`), webhook propio, reconciler de eventos de pago, migración, y wired de verdad en alta/pausa/reanudación/cancelación de suscripción y en el worker de la cola — no solo la interfaz Strategy. 28 casos de test (`test/payments.test.cjs`). Detalle y límites conocidos (tipo de cambio fijo, segundo cobro no probado contra Stripe real) en `docs/pagos-recurrentes.md`.
+- **Componente de IA (Pendiente 2 anterior, resuelto — pero con un cambio de rumbo):** la rama `feature/ia` (Gemini/Gemma, con el admin advisor `SuggestCajaAdmin`) **no se mergeó** — quedó bloqueada por el modelo Gemma no respetando `responseMimeType: json` (devolvía razonamiento en texto plano, nunca el JSON). Lo que entró a `main` es una implementación distinta, con DeepSeek (`DeepSeekRecommendationClient`, API OpenAI-compatible con `response_format: json_object`, más confiable para esto): 3 endpoints reales — `recomendar`, `recomendar-general`, `recomendar-existentes` (esta última devuelve cajas ya creadas que calzan con el perfil del suscriptor, no una caja inventada). El advisor para admin de `feature/ia` quedó descartado, no hay que rescatarlo.
 
 **Lo que falta es lo de abajo.**
 
-## Pendiente 1 — Stripe como API externa (hecho y validado en modo test)
+## Pendiente 1 — Tests del componente de IA
 
-Implementado en `feature/pagos-stripe` y probado contra Stripe real (sandbox): checkout por la cola, activación por webhook, pausar,
-reanudar y cancelar, todo también en Docker. Detalle, garantías y configuración en `docs/pagos-recurrentes.md`.
-
-**Resuelto después de la primera versión:** alta sin pago del suscriptor bloqueada, conversión de pesos a la moneda de cobro, reproceso
-de eventos de pago perdidos, recuperación de suscripciones pausadas por un cobro rechazado, checkout con vencimiento y descartable,
-reutilización del cliente y portal de facturación, y documentación en OpenAPI.
-
-**Límites conocidos:**
-- El tipo de cambio es fijo (`PAYMENT_FX_RATE`); no se consulta una cotización en vivo.
-- El segundo cobro mensual con Stripe real no se ejercitó (sólo con eventos simulados); haría falta un reloj de pruebas de Stripe.
-- En producción el secreto del webhook sale de un endpoint creado en el dashboard, no del Stripe CLI.
-
-## Pendiente 2 — Componente de IA (recomendador)
-
-`RecommendCajaMensual` (`modules/cajas-mensuales/domain/useCase/recommend-caja-mensual.ts`) está enganchado a un endpoint REST real, pero adentro es un heurístico hardcodeado: devuelve un nombre armado por template, precio fijo (`12500.00`) y `composiciones: []`. No hay modelo, no hay llamada a ninguna API de ML/LLM.
+TP.md pide explícitamente "evidencia de prueba del componente de IA" como parte del entregable de la Segunda Parte, y hoy no hay ninguno: ningún archivo de test referencia `recommend-caja-mensual`, `recommend-caja-mensual-general`, `recommend-cajas-existentes` ni `DeepSeekRecommendationClient`. Stripe sí tiene esto (28 casos); la IA no.
 
 **Tareas:**
-- [ ] Elegir el enfoque permitido por la consigna: recomendación por contenido/historial (usar `preferenciasOrganolepticas` del Suscriptor y `perfilNotas` de Producto), o delegar a una API de LLM (OpenAI/HF) para rankear/elegir productos.
-- [ ] Reemplazar la lógica de `RecommendCajaMensual.execute` por el algoritmo real, devolviendo `composiciones` reales en vez de `[]`.
-- [ ] Credenciales/config si se usa una API externa (`OPENAI_API_KEY` o similar) en `.env.example`.
-- [ ] Exponerlo como REST (ya existe el endpoint) o, si se quiere cumplir también el requisito asíncrono, invocarlo vía la cola existente (RabbitMQ) en lugar de sincrónico.
-- [ ] Evidencia de prueba del componente de IA (pedida explícitamente en el entregable de TP.md).
+- [ ] Tests de los 3 use cases con el cliente DeepSeek mockeado (sin llamar a la API real): camino feliz, `DEEPSEEK_API_KEY` ausente (400), respuesta del modelo no parseable, suscriptor/caja inexistente.
+- [ ] Al menos un test de `DeepSeekRecommendationClient.parsearJson` con una respuesta real capturada (positiva) para no depender de la red en CI.
 
-## Pendiente 3 — Facade de orquestación
+## Pendiente 2 — Facade de orquestación
 
-`SubscriptionPackFacade.activateSubscriptionAndPrepareFirstBox` (`common/patterns/facades/subscription-pack.facade.ts`) devuelve `ACTIVATION_PENDING_IMPLEMENTATION`. Tiene 4 TODOs que dependen directamente de los dos pendientes anteriores, por eso conviene cerrarlo después de Stripe e IA, no antes:
+`SubscriptionPackFacade.activateSubscriptionAndPrepareFirstBox` (`common/patterns/facades/subscription-pack.facade.ts`) sigue devolviendo `ACTIVATION_PENDING_IMPLEMENTATION`, sin cambios desde la última revisión. Ya no tiene nada bloqueándolo — Stripe y el SOAP de inventario están disponibles — así que es puramente trabajo de cablear lo que ya existe:
 
 - [ ] TODO 1 — Crear registro de suscripción (reusar `CreateSuscripcion`).
 - [ ] TODO 2 — Validar inventario vía SOAP (reusar `InventarioSoapClient.consultarInventario`; ya existe, solo falta inyectarlo).
-- [ ] TODO 3 — Ejecutar cobro recurrente vía Strategy → ya disponible (Pendiente 1); el cobro hoy ocurre en `ProcesarSolicitud.startPayment`.
-- [ ] TODO 4 — Emitir evento de dominio para la orden de empaque → usar el `EventDispatcher`/Observer existente (hoy definido pero sin ningún `subscribe`/`dispatch` real en el código) o, mejor, publicar directamente a la cola RabbitMQ ya armada en `solicitudes-suscripcion`.
+- [ ] TODO 3 — Ejecutar cobro recurrente vía Strategy → ya disponible (`createPaymentStrategy()`); el cobro real hoy ya ocurre en `ProcesarSolicitud`, el Facade solo necesita delegarle o replicar ese llamado.
+- [ ] TODO 4 — Emitir evento de dominio para la orden de empaque → publicar directo a la cola RabbitMQ existente (recomendado) en vez del `EventDispatcher` en memoria, que sigue sin usarse (ver cabos sueltos).
 
 ## Cabos sueltos menores
 
-- `reservarStock` y `actualizarInventario` (SOAP de inventario) están servidos pero sin ningún caller en el backend; probablemente se usen recién cuando se implemente el Facade (Pendiente 3).
-- El `EventDispatcher` (Observer en memoria) existe pero no tiene ningún `.subscribe()`/`.dispatch()` real todavía; evaluar si conviene eliminarlo en favor de publicar directo a RabbitMQ, para no mantener dos mecanismos de eventos en paralelo.
-- Confirmar qué rama van a usar como base estándar de equipo de ahora en más (`feature/integracion-ramas` vs `frontend` vs `feature/integrar-auth-multitenancy`) para evitar que se vuelvan a divergir trabajos como pasó con la cola.
+- `reservarStock` y `actualizarInventario` (SOAP de inventario) siguen servidos pero sin ningún caller; se resuelve junto con el Facade (Pendiente 2).
+- El `EventDispatcher` (Observer en memoria) sigue sin ningún `.subscribe()`/`.dispatch()` real; si el Facade va a publicar a RabbitMQ directamente, conviene borrar el `EventDispatcher` en vez de mantener dos mecanismos de eventos muertos en paralelo.
+- La divergencia de ramas que causó el lío de la cola y del admin advisor de IA ya se resolvió sola (todo consolidado en `main`), pero vale la pena como lección: confirmar en el equipo que `main` es la única rama de trabajo de ahora en más, para no repetir el problema con el próximo feature grande.
